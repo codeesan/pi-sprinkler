@@ -7,5 +7,5 @@ class Pins(Base):
     pi_version = Column(Integer,nullable=False)
     pin = Column(Integer,nullable=False)
     bcm = Column(Integer,nullable=False)
-    unique_id = Column(UUID(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True)
 
