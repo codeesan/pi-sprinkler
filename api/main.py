@@ -1,12 +1,5 @@
 from fastapi import FastAPI, Depends
-
-from sqlalchemy.orm import Session
-from pg_models import Pins;
-from pg_database import get_db;
-
-
-from pprint import pprint
-
+from sprinkerfunctions import sqlite_to_dict
 
 
 app = FastAPI()
@@ -20,14 +13,14 @@ async def health():
     return {"health": "I'm Alive"}
 
 #given a pi version get all pin information
-@app.get("/pi/pin")
-def get_all_pi_pin_info(pi_version:int, db: Session = Depends(get_db)):
-    result = db.query(Pins).filter(Pins.pi_version==pi_version)
-    return{"data": result.all()}
+@app.get("/pi/pin/{pi_version}")
+def get_all_pi_pin_info(pi_version:int):
+    result = sqlite_to_dict("select id,pin,bcm,pi_version from pins where pi_version={0}".format(pi_version))    
+    return{"data":result }
 
 #given a pi version and pin return the pin information
 @app.get("/pi/pin/{pi_version}/{pin}")
-def get_pi_pin_info( pi_version:int, pin:int, db: Session = Depends(get_db) ):
-    result = db.query(Pins).filter(Pins.pi_version==pi_version,Pins.pin==pin)
-    return{"data" : result.all()}
+def get_pi_pin_info( pi_version:int, pin:int):
+    result = sqlite_to_dict("select * from pins where pi_version={0} and pin={1}".format(pi_version,pin))
+    return{"data" : result }
 
