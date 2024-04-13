@@ -7,6 +7,12 @@ import sqlite3
 # 	bcm INTEGER NOT NULL,
 # 	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
 # );
+#  CREATE TABLE valves (
+#  	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+#  	name TEXT NOT NULL,
+#  	description TEXT,
+#  	pin INTEGER NOT NULL	
+# );
 pin_data = [(4,3,2),
 	 (4,5,3),
 	 (4,7,4),

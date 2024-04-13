@@ -12,6 +12,9 @@ async def root():
 async def health():
     return {"health": "I'm Alive"}
 
+##########
+### Pins
+##########
 #given a pi version get all pin information
 @app.get("/pi/pin/{pi_version}")
 def get_all_pi_pin_info(pi_version:int):
@@ -24,3 +27,11 @@ def get_pi_pin_info( pi_version:int, pin:int):
     result = sqlite_to_dict("select * from pins where pi_version={0} and pin={1}".format(pi_version,pin))
     return{"data" : result }
 
+######### 
+# Valves
+#########
+
+@app.get("/valves")
+def get_all_valves():
+    result = sqlite_to_dict("select * from valves")
+    return{"data":result}
