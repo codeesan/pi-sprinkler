@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends
-from sprinkerfunctions import sqlite_to_dict
-
+from fastapi.encoders import jsonable_encoder
+from sprinkerfunctions import sqlite_to_dict, sqlite_put
+from sprinkerModels import Valve
+from pprint import pprint
 
 app = FastAPI()
 
@@ -35,3 +37,13 @@ def get_pi_pin_info( pi_version:int, pin:int):
 def get_all_valves():
     result = sqlite_to_dict("select * from valves")
     return{"data":result}
+
+@app.put("/valves/{valve_id}")
+def update_valve(valve: Valve, valve_id: int):
+    update_valve_encoded = jsonable_encoder(valve)
+    name = update_valve_encoded["name"]
+    description = update_valve_encoded["description"]
+    
+    result = sqlite_put("valves",valve_id,"update valves set name='{0}', description='{1}' where id={2}".format(name,description,valve_id))
+
+    return result

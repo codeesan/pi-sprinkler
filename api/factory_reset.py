@@ -46,3 +46,28 @@ cur.executemany("INSERT INTO pins(pi_version,pin,bcm) VALUES(?, ?, ?)", pin_data
 
 con.commit()
 con.close()
+
+valve_data = [
+	 ('front north','small front yard',3),
+	 ('front south 1','bottom of big yard',5),
+	 ('front south 2','middle of big yard',7),
+	 ('front south 3','top of big yard',11),
+	 ('front south 4','Planter',13),
+	 ('back yard 1','close to patio',15),
+	 ('back yard 2','',19),
+	 ('back yard 3','',21),
+	 ('asdf','asdf',23),
+	 ('dsfg','',29)
+	 ('5g','',31),
+	 ('gsd','',33),
+	 ('sdfg','',35),
+	 ('sprinkler default','ninja Cody was here',37),
+	 ('fghj','',16),
+	 ('jytj','',18),
+]
+con = sqlite3.connect("sprinkers.db")
+cur = con.cursor()
+cur.executemany("INSERT INTO valves(name,description,pin) VALUES(?, ?, ?)", pin_data)
+
+con.commit()
+con.close()
