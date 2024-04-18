@@ -1,18 +1,5 @@
 import sqlite3
-# -- pins definition
 
-# CREATE TABLE pins (
-# 	pi_version INTEGER NOT NULL,
-# 	pin INTEGER NOT NULL,
-# 	bcm INTEGER NOT NULL,
-# 	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
-# );
-#  CREATE TABLE valves (
-#  	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-#  	name TEXT NOT NULL,
-#  	description TEXT,
-#  	pin INTEGER NOT NULL	
-# );
 pin_data = [(4,3,2),
 	 (4,5,3),
 	 (4,7,4),
@@ -40,10 +27,13 @@ pin_data = [(4,3,2),
 	 (4,38,20),
 	 (4,40,21),
 ]
-con = sqlite3.connect("sprinkers.db")
+con = sqlite3.connect("sprinklers.db")
 cur = con.cursor()
+cur.execute("DROP TABLE IF EXISTS pins")
+con.commit()
+cur.execute("CREATE TABLE pins (pi_version INTEGER NOT NULL, pin INTEGER NOT NULL, bcm INTEGER NOT NULL, id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT);")
+con.commit()
 cur.executemany("INSERT INTO pins(pi_version,pin,bcm) VALUES(?, ?, ?)", pin_data)
-
 con.commit()
 con.close()
 
@@ -57,7 +47,7 @@ valve_data = [
 	 ('back yard 2','',19),
 	 ('back yard 3','',21),
 	 ('asdf','asdf',23),
-	 ('dsfg','',29)
+	 ('dsfg','',29),
 	 ('5g','',31),
 	 ('gsd','',33),
 	 ('sdfg','',35),
@@ -65,9 +55,30 @@ valve_data = [
 	 ('fghj','',16),
 	 ('jytj','',18),
 ]
-con = sqlite3.connect("sprinkers.db")
+con = sqlite3.connect("sprinklers.db")
 cur = con.cursor()
-cur.executemany("INSERT INTO valves(name,description,pin) VALUES(?, ?, ?)", pin_data)
+cur.execute("DROP TABLE IF EXISTS valves")
+con.commit()
+cur.execute("CREATE TABLE valves (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, pin INTEGER NOT NULL);")
+con.commit()
+cur.executemany("INSERT INTO valves(name,description,pin) VALUES(?, ?, ?)", valve_data)
+
+con.commit()
+con.close()
+
+
+zone_name_data = [
+    ('front yard', 'Lawns in the front yard'),
+    ('front garden', 'flowers and shrubs in the front yard'),
+    
+]
+con = sqlite3.connect("sprinklers.db")
+cur = con.cursor()
+cur.execute("DROP TABLE IF EXISTS zone_names")
+con.commit()
+cur.execute("CREATE TABLE zone_names (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);")
+con.commit()
+cur.executemany("INSERT INTO zone_names(name,description) VALUES(?, ?)", zone_name_data)
 
 con.commit()
 con.close()
