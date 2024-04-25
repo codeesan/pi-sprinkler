@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
-from sprinkerfunctions import sqlite_to_dict, sqlite_put
+from sprinkerfunctions import sqlite_to_dict, sqlite_put_post
 from sprinkerModels import Valve, ZoneName
 from pprint import pprint
 
@@ -43,7 +43,7 @@ def update_valve(valve: Valve, valve_id: int):
     update_valve_encoded = jsonable_encoder(valve)
     name = update_valve_encoded["name"]
     description = update_valve_encoded["description"]
-    result = sqlite_put("update valves set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,valve_id))
+    result = sqlite_put_post("update valves set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,valve_id))
     return {"data":result}
 
 
@@ -61,5 +61,5 @@ def update_zone_name(zone_id: int, zone: ZoneName):
     update_zone_name_encoded = jsonable_encoder(zone)
     name = update_zone_name_encoded["name"]
     description = update_zone_name_encoded["description"]
-    result = sqlite_put("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
+    result = sqlite_put_post("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
     return{"data":result}

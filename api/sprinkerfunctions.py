@@ -12,7 +12,7 @@ def sqlite_to_dict(statement):
     con.close()
     return result
 
-def sqlite_put(statement):
+def sqlite_put_post(statement):
     result = []
     con = sqlite3.connect("sprinklers.db")
     con.row_factory = sqlite3.Row
