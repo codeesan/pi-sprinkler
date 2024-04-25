@@ -63,3 +63,11 @@ def update_zone_name(zone_id: int, zone: ZoneName):
     description = update_zone_name_encoded["description"]
     result = sqlite_put_post("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
     return{"data":result}
+
+@app.post("/zones/name/")
+def add_zone_name(zone: ZoneName):
+    add_zone_name_encoded = jsonable_encoder(zone)
+    name = add_zone_name_encoded["name"]
+    description = add_zone_name_encoded["description"]
+    result = sqlite_put_post("insert into zone_names(\"name\",\"description\") values (\"{0}\", \"{1}\")".format(name, description))
+    return{"data":result}
