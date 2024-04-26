@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response, status
 from fastapi.encoders import jsonable_encoder
 from sprinkerfunctions import sqlite_to_dict, sqlite_put_post
 from sprinkerModels import Valve, ZoneName
@@ -7,18 +7,20 @@ from pprint import pprint
 
 app = FastAPI()
 
-@app.get("/")
-async def root():
-    return {"health": "I'm Alive"}
 
 @app.get("/healthz")
 async def health():
     return {"health": "I'm Alive"}
 
-@app.post("/factoryreset")
-def reset_to_factory_defaults(validate_intent:str):
+#perform a factory reset on the device - basically reloads the base sql data
+@app.post("/factoryreset", status_code=200)
+def reset_to_factory_defaults(validate_intent:str, response: Response):
     result = factory_reset(validate_intent)
-    return{"data":result}
+    if result == 200:
+        return{"data: Factory Reset Complete"}
+    else:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return{"data":"Aborting Factory Reset - MUST SAY 'I want to reset"}
 
 ##########
 ### Pins
@@ -47,12 +49,12 @@ def get_available_pins( pi_version:int):
 ######### 
 # Valves
 #########
-
+#get all the valves
 @app.get("/valves")
 def get_all_valves():
     result = sqlite_to_dict("select * from valves")
     return{"data":result}
-
+#update valve
 @app.put("/valves/{valve_id}")
 def update_valve(valve: Valve, valve_id: int):
     update_valve_encoded = jsonable_encoder(valve)
@@ -60,6 +62,15 @@ def update_valve(valve: Valve, valve_id: int):
     description = update_valve_encoded["description"]
     result = sqlite_put_post("update valves set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,valve_id))
     return {"data":result}
+#add a valve
+@app.post("/valves")
+def add_valve(valve: Valve, pin: int):
+    add_valve_encoded = jsonable_encoder(valve)
+    name = add_valve_encoded["name"]
+    description = add_valve_encoded["description"]
+    result = sqlite_put_post("insert into valves(name,description,pin) values(\"{0}\",\"{1}\",{2})".format(name,description,pin))
+    return{"data":result}
+
 
 
 ########
@@ -85,6 +96,38 @@ def update_zone_name(zone_id: int, zone: ZoneName):
     name = update_zone_name_encoded["name"]
     description = update_zone_name_encoded["description"]
     result = sqlite_put_post("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
+    return{"data":result}
+
+#remove a zone name
+@app.delete("/zones/names", status_code=200)
+def delete_zone_name(zone_id: int, response: Response):
+    #check to see if there are any valves associated with the zone
+    print("made it this far")
+    valves = sqlite_to_dict("select * from zones where zone_id={0}".format(zone_id))
+    if valves == []:
+        result = sqlite_put_post("delete from zone_names where id={0}".format(zone_id))
+        return{"data": result}
+    else:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        result = "Cannot delete zone name if valves are attached to zone."
+        return{"data":result}
+
+#get valves for a given zone
+@app.get("/zones/valves")
+def get_valves_for_a_zone(zone_id: int):
+    result = sqlite_to_dict("select * from zones where zone_id = {0}".format(zone_id))
+    return{"data":result}
+
+#add valves to a zone
+@app.post("/zones/valves")
+def add_valve_to_zone(zone_id: int, valve_id:int):
+    result = sqlite_put_post("insert into zones(zone_id, valve) values({0},{1})".format(zone_id,valve_id))
+    return{"data":result}
+
+#remove a valve from a zone
+@app.delete("/zones/valves")
+def remove_valve_from_zone(zone_id:int, valve_id:int):
+    result = sqlite_put_post("delete from zones where zone_id={0} and valve={1}".format(zone_id,valve_id))
     return{"data":result}
 
 

@@ -2,7 +2,7 @@ import sqlite3
 
 def factory_reset(verify:str):
 	if (verify != "I want to reset"):
-		return("Aborting Factory Reset")
+		return(403)
 		exit()
 	else:
 		pin_data = [(4,3,2),
@@ -47,7 +47,7 @@ def factory_reset(verify:str):
 			('front south 1','bottom of big yard',5),
 			('front south 2','middle of big yard',7),
 			('front south 3','top of big yard',11),
-			('front south 4','Planter',13),
+			('front planter','Planter',13),
 			('back yard 1','close to patio',15),
 
 		]
@@ -80,18 +80,22 @@ def factory_reset(verify:str):
 		con.close()
 
 		zone_data = [
-			
+			(1,1),
+			(1,2),
+			(1,3),
+			(1,4),
+			(2,5),
 		]
 
 		con = sqlite3.connect("sprinklers.db")
 		cur = con.cursor()
 		cur.execute("DROP TABLE IF EXISTS zones")
 		con.commit()
-		cur.execute("CREATE TABLE zones (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);")
+		cur.execute("CREATE TABLE zones (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, zone_id INTEGER NOT NULL, valve INTEGER NOT NULL);")
 		con.commit()
-		cur.executemany("INSERT INTO zones(name,description) VALUES(?, ?)", zone_data)
+		cur.executemany("INSERT INTO zones(zone_id,valve) VALUES(?, ?)", zone_data)
 
 		con.commit()
 		con.close()
 
-		return("Factory Reset Complete!")
+		return(200)
