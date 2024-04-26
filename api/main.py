@@ -7,7 +7,6 @@ from pprint import pprint
 
 app = FastAPI()
 
-
 @app.get("/healthz")
 async def health():
     return {"health": "I'm Alive"}
@@ -20,7 +19,9 @@ def reset_to_factory_defaults(validate_intent:str, response: Response):
         return{"data: Factory Reset Complete"}
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        return{"data":"Aborting Factory Reset - MUST SAY 'I want to reset"}
+        return{"data":"Aborting Factory Reset - MUST SAY 'I want to reset'"}
+
+
 
 ##########
 ### Pins
@@ -77,11 +78,12 @@ def add_valve(valve: Valve, pin: int):
 # Zones
 ########
 
+#get all the zone names
 @app.get("/zone/names")
 def get_all_zones():
     result = sqlite_to_dict("select * from zone_names")
     return{"data":result}
-
+#add a zone name
 @app.post("/zones/name/")
 def add_zone_name(zone: ZoneName):
     add_zone_name_encoded = jsonable_encoder(zone)
@@ -90,6 +92,7 @@ def add_zone_name(zone: ZoneName):
     result = sqlite_put_post("insert into zone_names(\"name\",\"description\") values (\"{0}\", \"{1}\")".format(name, description))
     return{"data":result}
 
+#update zone name by id
 @app.put("/zones/names/{zone_id}")
 def update_zone_name(zone_id: int, zone: ZoneName):
     update_zone_name_encoded = jsonable_encoder(zone)
@@ -102,7 +105,6 @@ def update_zone_name(zone_id: int, zone: ZoneName):
 @app.delete("/zones/names", status_code=200)
 def delete_zone_name(zone_id: int, response: Response):
     #check to see if there are any valves associated with the zone
-    print("made it this far")
     valves = sqlite_to_dict("select * from zones where zone_id={0}".format(zone_id))
     if valves == []:
         result = sqlite_put_post("delete from zone_names where id={0}".format(zone_id))
@@ -129,5 +131,3 @@ def add_valve_to_zone(zone_id: int, valve_id:int):
 def remove_valve_from_zone(zone_id:int, valve_id:int):
     result = sqlite_put_post("delete from zones where zone_id={0} and valve={1}".format(zone_id,valve_id))
     return{"data":result}
-
-
