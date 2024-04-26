@@ -5,6 +5,7 @@ def sqlite_to_dict(statement):
     con = sqlite3.connect("sprinklers.db")
     con.row_factory = sqlite3.Row
     cur = con.cursor()
+    print(statement)
     for row in cur.execute(statement):
         print(dict(row))
         result.append(dict(row))

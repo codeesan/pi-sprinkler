@@ -1,84 +1,97 @@
 import sqlite3
 
-pin_data = [(4,3,2),
-	 (4,5,3),
-	 (4,7,4),
-	 (4,11,17),
-	 (4,13,27),
-	 (4,15,22),
-	 (4,19,10),
-	 (4,21,9),
-	 (4,23,11),
-	 (4,29,5),
-	 (4,31,6),
-	 (4,33,13),
-	 (4,35,19),
-	 (4,37,26),
-	 (4,8,14),
-	 (4,10,15),
-	 (4,12,18),
-	 (4,16,23),
-	 (4,18,24),
-	 (4,22,25),
-	 (4,24,8),
-	 (4,26,7),
-	 (4,32,12),
-	 (4,36,16),
-	 (4,38,20),
-	 (4,40,21),
-]
-con = sqlite3.connect("sprinklers.db")
-cur = con.cursor()
-cur.execute("DROP TABLE IF EXISTS pins")
-con.commit()
-cur.execute("CREATE TABLE pins (pi_version INTEGER NOT NULL, pin INTEGER NOT NULL, bcm INTEGER NOT NULL, id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT);")
-con.commit()
-cur.executemany("INSERT INTO pins(pi_version,pin,bcm) VALUES(?, ?, ?)", pin_data)
-con.commit()
-con.close()
+def factory_reset(verify:str):
+	if (verify != "I want to reset"):
+		return("Aborting Factory Reset")
+		exit()
+	else:
+		pin_data = [(4,3,2),
+			(4,5,3),
+			(4,7,4),
+			(4,11,17),
+			(4,13,27),
+			(4,15,22),
+			(4,19,10),
+			(4,21,9),
+			(4,23,11),
+			(4,29,5),
+			(4,31,6),
+			(4,33,13),
+			(4,35,19),
+			(4,37,26),
+			(4,8,14),
+			(4,10,15),
+			(4,12,18),
+			(4,16,23),
+			(4,18,24),
+			(4,22,25),
+			(4,24,8),
+			(4,26,7),
+			(4,32,12),
+			(4,36,16),
+			(4,38,20),
+			(4,40,21),
+		]
+		con = sqlite3.connect("sprinklers.db")
+		cur = con.cursor()
+		cur.execute("DROP TABLE IF EXISTS pins")
+		con.commit()
+		cur.execute("CREATE TABLE pins (pi_version INTEGER NOT NULL, pin INTEGER NOT NULL, bcm INTEGER NOT NULL, id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT);")
+		con.commit()
+		cur.executemany("INSERT INTO pins(pi_version,pin,bcm) VALUES(?, ?, ?)", pin_data)
+		con.commit()
+		con.close()
 
-valve_data = [
-	 ('front north','small front yard',3),
-	 ('front south 1','bottom of big yard',5),
-	 ('front south 2','middle of big yard',7),
-	 ('front south 3','top of big yard',11),
-	 ('front south 4','Planter',13),
-	 ('back yard 1','close to patio',15),
-	 ('back yard 2','',19),
-	 ('back yard 3','',21),
-	 ('asdf','asdf',23),
-	 ('dsfg','',29),
-	 ('5g','',31),
-	 ('gsd','',33),
-	 ('sdfg','',35),
-	 ('sprinkler default','ninja Cody was here',37),
-	 ('fghj','',16),
-	 ('jytj','',18),
-]
-con = sqlite3.connect("sprinklers.db")
-cur = con.cursor()
-cur.execute("DROP TABLE IF EXISTS valves")
-con.commit()
-cur.execute("CREATE TABLE valves (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, pin INTEGER NOT NULL);")
-con.commit()
-cur.executemany("INSERT INTO valves(name,description,pin) VALUES(?, ?, ?)", valve_data)
+		valve_data = [
+			('front north','small front yard',3),
+			('front south 1','bottom of big yard',5),
+			('front south 2','middle of big yard',7),
+			('front south 3','top of big yard',11),
+			('front south 4','Planter',13),
+			('back yard 1','close to patio',15),
 
-con.commit()
-con.close()
+		]
+		con = sqlite3.connect("sprinklers.db")
+		cur = con.cursor()
+		cur.execute("DROP TABLE IF EXISTS valves")
+		con.commit()
+		cur.execute("CREATE TABLE valves (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, pin INTEGER NOT NULL);")
+		con.commit()
+		cur.executemany("INSERT INTO valves(name,description,pin) VALUES(?, ?, ?)", valve_data)
+
+		con.commit()
+		con.close()
 
 
-zone_name_data = [
-    ('front yard', 'Lawns in the front yard'),
-    ('front garden', 'flowers and shrubs in the front yard'),
-    
-]
-con = sqlite3.connect("sprinklers.db")
-cur = con.cursor()
-cur.execute("DROP TABLE IF EXISTS zone_names")
-con.commit()
-cur.execute("CREATE TABLE zone_names (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);")
-con.commit()
-cur.executemany("INSERT INTO zone_names(name,description) VALUES(?, ?)", zone_name_data)
+		zone_name_data = [
+			('front yard', 'Lawns in the front yard'),
+			('front garden', 'flowers and shrubs in the front yard'),
+			
+		]
+		con = sqlite3.connect("sprinklers.db")
+		cur = con.cursor()
+		cur.execute("DROP TABLE IF EXISTS zone_names")
+		con.commit()
+		cur.execute("CREATE TABLE zone_names (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);")
+		con.commit()
+		cur.executemany("INSERT INTO zone_names(name,description) VALUES(?, ?)", zone_name_data)
 
-con.commit()
-con.close()
+		con.commit()
+		con.close()
+
+		zone_data = [
+			
+		]
+
+		con = sqlite3.connect("sprinklers.db")
+		cur = con.cursor()
+		cur.execute("DROP TABLE IF EXISTS zones")
+		con.commit()
+		cur.execute("CREATE TABLE zones (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);")
+		con.commit()
+		cur.executemany("INSERT INTO zones(name,description) VALUES(?, ?)", zone_data)
+
+		con.commit()
+		con.close()
+
+		return("Factory Reset Complete!")

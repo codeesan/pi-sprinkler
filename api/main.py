@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from sprinkerfunctions import sqlite_to_dict, sqlite_put_post
 from sprinkerModels import Valve, ZoneName
+from factory_reset import factory_reset
 from pprint import pprint
 
 app = FastAPI()
@@ -13,6 +14,11 @@ async def root():
 @app.get("/healthz")
 async def health():
     return {"health": "I'm Alive"}
+
+@app.post("/factoryreset")
+def reset_to_factory_defaults(validate_intent:str):
+    result = factory_reset(validate_intent)
+    return{"data":result}
 
 ##########
 ### Pins
@@ -28,6 +34,15 @@ def get_all_pi_pin_info(pi_version:int):
 def get_pi_pin_info( pi_version:int, pin:int):
     result = sqlite_to_dict("select * from pins where pi_version={0} and pin={1}".format(pi_version,pin))
     return{"data" : result }
+
+#given a pi version return pins not in use by valves
+@app.get("/pi/pinsavailable/{pi_version}")
+def get_available_pins( pi_version:int):
+    print("made it this far")
+    result = sqlite_to_dict("select pin from pins where pi_version={0} and pin not in (select pin from valves);".format(pi_version))
+    return{"data" : result }
+
+
 
 ######### 
 # Valves
@@ -56,6 +71,14 @@ def get_all_zones():
     result = sqlite_to_dict("select * from zone_names")
     return{"data":result}
 
+@app.post("/zones/name/")
+def add_zone_name(zone: ZoneName):
+    add_zone_name_encoded = jsonable_encoder(zone)
+    name = add_zone_name_encoded["name"]
+    description = add_zone_name_encoded["description"]
+    result = sqlite_put_post("insert into zone_names(\"name\",\"description\") values (\"{0}\", \"{1}\")".format(name, description))
+    return{"data":result}
+
 @app.put("/zones/names/{zone_id}")
 def update_zone_name(zone_id: int, zone: ZoneName):
     update_zone_name_encoded = jsonable_encoder(zone)
@@ -64,10 +87,4 @@ def update_zone_name(zone_id: int, zone: ZoneName):
     result = sqlite_put_post("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
     return{"data":result}
 
-@app.post("/zones/name/")
-def add_zone_name(zone: ZoneName):
-    add_zone_name_encoded = jsonable_encoder(zone)
-    name = add_zone_name_encoded["name"]
-    description = add_zone_name_encoded["description"]
-    result = sqlite_put_post("insert into zone_names(\"name\",\"description\") values (\"{0}\", \"{1}\")".format(name, description))
-    return{"data":result}
+
