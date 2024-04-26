@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Response, status
 from fastapi.encoders import jsonable_encoder
-from sprinkerfunctions import sqlite_to_dict, sqlite_put_post
+from sprinkerfunctions import sqlite_to_dict, sqlite_put_post, is_devmode
 from sprinkerModels import Valve, ZoneName
 from factory_reset import factory_reset
 from pprint import pprint
@@ -9,7 +9,11 @@ app = FastAPI()
 
 @app.get("/healthz")
 async def health():
-    return {"health": "I'm Alive"}
+    health = {
+        "health": "I'm Alive", 
+        "Dev Mode": is_devmode()
+        }
+    return health
 
 #perform a factory reset on the device - basically reloads the base sql data
 @app.post("/factoryreset", status_code=200)

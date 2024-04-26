@@ -1,4 +1,6 @@
 import sqlite3
+from gpiozero import DigitalOutputDevice
+import os
 
 def sqlite_to_dict(statement):
     result = []
@@ -23,4 +25,12 @@ def sqlite_put_post(statement):
     con.commit()
     con.close()
     return result
+
+# def turn_on_pin(bcm:int ):
+#     led = DigitalOutputDevice(17)
+#     led.on()
+#     led.off()
+
+def is_devmode():
+    return os.environ.get("SPRINKLER_DEV",False)
 
