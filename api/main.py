@@ -1,17 +1,25 @@
 from fastapi import FastAPI, Depends, Response, status
 from fastapi.encoders import jsonable_encoder
-from sprinkerfunctions import sqlite_to_dict, sqlite_put_post, is_devmode
+from sprinkerfunctions import sqlite_to_dict, sqlite_put_post, turn_on_valve, turn_off_valve, get_valve_status
 from sprinkerModels import Valve, ZoneName
 from factory_reset import factory_reset
+import settings
+
 from pprint import pprint
 
 app = FastAPI()
+
+#figure out the pi version
+settings.pi_version = sqlite_to_dict("select * from settings where key=\"pi_version\"")[0]['value']
+
 
 @app.get("/healthz")
 async def health():
     health = {
         "health": "I'm Alive", 
-        "Dev Mode": is_devmode()
+        "Dev Mode": settings.devmode,
+        "Sprinker Dev IP" : settings.devip,
+        "Raspberry Pi Version" :settings.pi_version,
         }
     return health
 
@@ -42,10 +50,11 @@ def get_pi_pin_info( pi_version:int, pin:int):
     result = sqlite_to_dict("select * from pins where pi_version={0} and pin={1}".format(pi_version,pin))
     return{"data" : result }
 
+
+
 #given a pi version return pins not in use by valves
 @app.get("/pi/pinsavailable/{pi_version}")
 def get_available_pins( pi_version:int):
-    print("made it this far")
     result = sqlite_to_dict("select pin from pins where pi_version={0} and pin not in (select pin from valves);".format(pi_version))
     return{"data" : result }
 

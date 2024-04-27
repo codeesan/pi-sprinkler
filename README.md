@@ -24,14 +24,17 @@ http://localhost:8000/docs
 So you'll need to setup your Raspberry Pi to allow for remote gpio check this out: 
 https://gpiozero.readthedocs.io/en/stable/remote_gpio.html 
 For development mode on your local computer just set an environment variable 
-``` export SPRINKLER_DEV=true ```
-This is referenced in the code simply by:
+``` 
+export SPRINKLER_DEV=true 
+export SPRINKLER_IP=192.16.1.10
+```
+settings.py will load these values at boot. default is set to False for devmode.
 
 ```python
-import os
-sprinker_dev = os.environ.get("SPRINKLER_DEV",False)
+    devmode = os.environ.get("SPRINKLER_DEV",False)
+    devip = os.environ.get("SPRINKLER_IP")
 ```
-There is also a function in sprinkerfunctions called ```is_devmode()``` that will return True or False depending on the ENV var.
+
 
 #### factory reset 
 There is a script under the api called factory_reset.py. This is referenced at /factoryreset and requires that you validate intent by stating "I want to reset". This will drop all tables and load with basic data including pin/bcm, and a couple valves and zones. 

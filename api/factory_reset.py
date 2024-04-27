@@ -125,4 +125,17 @@ def factory_reset(verify:str):
 		con.commit()
 		con.close()
 
+		settings_data = [
+			("pi_version", "4"),
+		]
+		con = sqlite3.connect("sprinklers.db")
+		cur = con.cursor()
+		cur.execute("DROP TABLE IF EXISTS settings")
+		con.commit()
+		cur.execute("CREATE TABLE settings (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL, value TEXT NOT NULL);")
+		con.commit()
+		cur.executemany("INSERT INTO settings(key,value) VALUES(?, ?)", settings_data)
+
+		con.commit()
+		con.close()
 		return(200)
