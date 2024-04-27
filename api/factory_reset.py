@@ -139,3 +139,6 @@ def factory_reset(verify:str):
 		con.commit()
 		con.close()
 		return(200)
+	
+if __name__ == "__main__":
+	factory_reset("I want to reset")
