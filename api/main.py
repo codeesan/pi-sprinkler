@@ -85,6 +85,16 @@ def add_valve(valve: Valve, pin: int):
     result = sqlite_put_post("insert into valves(name,description,pin) values(\"{0}\",\"{1}\",{2})".format(name,description,pin))
     return{"data":result}
 
+#operate a valve
+@app.post("/valves/operate")
+def operate_valve(valve:int, set_status:str):
+    bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
+    #print("BCM:{0}".format(bcm))
+    if set_status == "on":
+        result = turn_on_valve(bcm)
+    elif set_status == "off":
+        result = turn_off_valve(bcm)
+    return {"data": result}
 
 
 ########
