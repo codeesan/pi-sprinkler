@@ -12,7 +12,8 @@
 I have a venv of sprinkers_venv: 
 
 ``` python3 -m venv sprinklers_venv```  
-``` source sprinklers_venv/bin/activate```  
+``` source sprinklers_venv/bin/activate```
+``` cd api ```  
 ``` pip3 install -r requirements.txt```
 
 #### development of api

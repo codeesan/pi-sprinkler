@@ -74,15 +74,21 @@ def turn_off_valve(bcm:int):
     
 
 def get_valve_status(bcm:int):
-    print("Valve Status")
-    if settings.devmode:
-        factory = PiGPIOFactory(host=settings.devip)
-        valve = DigitalOutputDevice(bcm, pin_factory=factory)
+    if bcm == settings.current_bcm or settings.current_bcm == None:
+        global valve
+        print("Valve Status:")
+        if not valve:
+            if settings.devmode:
+                factory = PiGPIOFactory(host=settings.devip)
+                valve = DigitalOutputDevice(bcm, pin_factory=factory)
+            else:
+                valve = DigitalOutputDevice(bcm)
+        pprint(valve)
+        print("valve is_active: {0}".format(valve.is_active))
+        print("valve status: {0}".format(valve.value))
+        print("")
+        print("")
+        return True
     else:
-        valve = DigitalOutputDevice(bcm)
-    pprint(valve)
-    print("valve is_active: {0}".format(valve.is_active))
-    print("valve status: {0}".format(valve.value))
-    print("")
-    print("")
-    return True
+        return False
+    

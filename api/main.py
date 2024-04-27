@@ -103,8 +103,14 @@ def operate_valve(valve:int, set_status:str, response:Response):
     
 @app.get("/valves/checkstatus", status_code=200)
 def check_valve_status(valve:int, response:Response):
-    result = get_valve_status(valve)
-    return {"data":result}
+    bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
+    result = get_valve_status(bcm)
+    if result == True:
+        return{"data":"Valve {0} set to {1}".format(valve,"something")}
+    else:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+
 
 ########
 # Zones
