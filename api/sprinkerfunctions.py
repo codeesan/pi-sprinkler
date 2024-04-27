@@ -36,43 +36,53 @@ def sqlite_put_post(statement):
     return result
 
 def turn_on_valve(bcm:int):
-    global valve
-    print("Valve ON")
+    if bcm == settings.current_bcm or settings.current_bcm == None:    
+        global valve
+        print("Valve ON")
+        if not valve:
+            if settings.devmode:
+                factory = PiGPIOFactory(host=settings.devip)
+                valve = DigitalOutputDevice(bcm, pin_factory=factory)
+            else:
+                valve = DigitalOutputDevice(bcm)
+        valve.on()
+        settings.current_bcm = bcm
+        pprint(valve)
+        print("valve property: {0}".format(valve.value))
+        return True
+    else:
+        return False
     
-    if not valve:
-        if settings.devmode:
-            factory = PiGPIOFactory(host=settings.devip)
-            valve = DigitalOutputDevice(bcm, pin_factory=factory)
-        else:
-            valve = DigitalOutputDevice(bcm)
-    valve.on()
-    pprint(valve)
-    print("valve property: {0}".format(valve.value))
-    return True
 
 def turn_off_valve(bcm:int):
-    global valve
-    print("Valve OFF")
-    if not valve:
-        if settings.devmode:
-            factory = PiGPIOFactory(host=settings.devip)
-            valve = DigitalOutputDevice(bcm, pin_factory=factory)
-        else:
-            valve = DigitalOutputDevice(bcm)
-    valve.off()
-    pprint(valve)
-    print("valve property: {0}".format(valve.value))
-    return True
+    if bcm == settings.current_bcm or settings.current_bcm == None: 
+        global valve
+        print("Valve OFF")
+        if not valve:
+            if settings.devmode:
+                factory = PiGPIOFactory(host=settings.devip)
+                valve = DigitalOutputDevice(bcm, pin_factory=factory)
+            else:
+                valve = DigitalOutputDevice(bcm)
+        valve.off()
+        settings.current_bcm = None
+        pprint(valve)
+        print("valve property: {0}".format(valve.value))
+        return True
+    else:
+        return False
+    
 
 def get_valve_status(bcm:int):
-    global valve
     print("Valve Status")
-    if not valve:
-        if settings.devmode:
-            factory = PiGPIOFactory(host=settings.devip)
-            valve = DigitalOutputDevice(bcm, pin_factory=factory)
-        else:
-            valve = DigitalOutputDevice(bcm)
+    if settings.devmode:
+        factory = PiGPIOFactory(host=settings.devip)
+        valve = DigitalOutputDevice(bcm, pin_factory=factory)
+    else:
+        valve = DigitalOutputDevice(bcm)
     pprint(valve)
-    print("valve property: {0}".format(valve.value))
+    print("valve is_active: {0}".format(valve.is_active))
+    print("valve status: {0}".format(valve.value))
+    print("")
+    print("")
     return True
