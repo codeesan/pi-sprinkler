@@ -10,6 +10,7 @@ httptools==0.6.1
 idna==3.7
 importlib-metadata==4.13.0
 importlib-resources==5.13.0
+pigpio==1.78
 pydantic==2.7.0
 pydantic_core==2.18.1
 python-dotenv==1.0.1
