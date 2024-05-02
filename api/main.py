@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Response, status
 from fastapi.encoders import jsonable_encoder
-from sprinkerfunctions import sqlite_to_dict, sqlite_put_post, turn_on_valve, turn_off_valve, get_valve_status
+from sprinkerfunctions import *
 from sprinkerModels import Valve, ZoneName
 from factory_reset import factory_reset
 import settings
@@ -89,12 +89,19 @@ def add_valve(valve: Valve, pin: int):
 #operate a valve
 @app.post("/valves/operate", status_code=200)
 def operate_valve(valve:int, set_status:str, response:Response):
+    
+    #get bcm for valve
     bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
+    
+    #check for valid input
     if set_status == "on":
         result = turn_on_valve(bcm)
     elif set_status == "off":
         result = turn_off_valve(bcm)
-
+    else:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return{"data":"Aborting - valid status for set is on or off"}
+    
     if result == True:
         return{"data":"Valve {0} set to {1}".format(valve,set_status)}
     else:
@@ -105,12 +112,15 @@ def operate_valve(valve:int, set_status:str, response:Response):
 def check_valve_status(valve:int, response:Response):
     bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
     result = get_valve_status(bcm)
-    if result == True:
-        return{"data":"Valve {0} set to {1}".format(valve,"something")}
-    else:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+    return{"data":"Valve {0} set to {1}".format(valve,result)}
+    # else:
+    #     response.status_code = status.HTTP_400_BAD_REQUEST
+    #     return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
 
+@app.get("/valves/allstatus", status_code=200)
+def get_status_of_all_valve_bcm():
+    result = get_all_valve_bcm_status()
+    return{"data": result}
 
 ########
 # Zones

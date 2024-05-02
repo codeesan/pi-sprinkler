@@ -6,7 +6,9 @@
 #### install nginx
 ```sudo apt-get install nginx```   
 ```sudo systemctl enable nginx```
-
+#### install pigpiod
+```sudo apt-get install pigpiod``` 
+```sudo systemctl enable pigpiod``` 
 ## api
 #### setup
 I have a venv of sprinkers_venv: 
