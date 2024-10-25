@@ -1,4 +1,7 @@
 __pycache__/
 note
 sprinklers_venv/
+testing_venv/
 api/sprinklers.db
+api/testing.py
+api/testing2.py
