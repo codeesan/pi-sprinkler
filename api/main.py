@@ -62,7 +62,7 @@ def get_available_pins( pi_version:int):
 
 
 ######### 
-# Valves
+# Valvesdat
 #########
 #get all the valves
 @app.get("/valves")
@@ -97,7 +97,7 @@ def operate_valve(valve:int, set_status:str, response:Response):
     if set_status == "on":
         result = turn_on_valve(bcm)
     elif set_status == "off":
-        result = turn_off_valve(bcm)
+        result = turn_off_all_valves()
     else:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return{"data":"Aborting - valid status for set is on or off"}

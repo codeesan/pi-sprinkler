@@ -5,3 +5,4 @@ testing_venv/
 api/sprinklers.db
 api/testing.py
 api/testing2.py
+.DS_store
