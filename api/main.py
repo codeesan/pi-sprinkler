@@ -62,7 +62,7 @@ def get_available_pins( pi_version:int):
 
 
 ######### 
-# Valvesdat
+# Valves
 #########
 #get all the valves
 @app.get("/valves")
@@ -91,8 +91,8 @@ def add_valve(valve: Valve, pin: int):
 def operate_valve(valve:int, set_status:str, response:Response):
     
     #get bcm for valve
-    bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
-    
+    #bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
+    bcm = valve
     #check for valid input
     if set_status == "on":
         result = turn_on_valve(bcm)
