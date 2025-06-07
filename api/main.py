@@ -90,12 +90,9 @@ def add_valve(valve: Valve, pin: int):
 @app.post("/valves/operate", status_code=200)
 def operate_valve(valve:int, set_status:str, response:Response):
     
-    #get bcm for valve
-    #bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
-    bcm = valve
     #check for valid input
     if set_status == "on":
-        result = turn_on_valve(bcm)
+        result = turn_on_valve(valve)
     elif set_status == "off":
         result = turn_off_all_valves()
     else:
@@ -106,7 +103,7 @@ def operate_valve(valve:int, set_status:str, response:Response):
         return{"data":"Valve {0} set to {1}".format(valve,set_status)}
     else:
         response.status_code = status.HTTP_400_BAD_REQUEST
-        return{"data":"Aborting - It appears you already have a valve on. You can only operate 1 valve at a time."}
+        return{"data":"Aborting - Something went wrong."}
     
 @app.get("/valves/checkstatus", status_code=200)
 def check_valve_status(valve:int, response:Response):

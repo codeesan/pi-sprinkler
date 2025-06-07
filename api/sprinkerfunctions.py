@@ -4,6 +4,7 @@ import settings
 from pprint import pprint
 from smbus2 import SMBus
 
+
 settings.init()
 bus = SMBus
 
@@ -33,7 +34,7 @@ def sqlite_put_post(statement):
     return result
 
 def turn_on_valve(port):
-    print(port)
+    print("Turn on Valve{0}".format(port) )
     #set the side of the relay to 1
     side = 1
     if port > 8:
@@ -49,6 +50,8 @@ def turn_on_valve(port):
     else:
        result =  bus.write_byte_data(0x27,this_address,0xff)
     return result
+
+
 
 def turn_off_all_valves():
     result = bus.write_byte_data(0x27,0xff,0xff)
