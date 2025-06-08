@@ -15,6 +15,9 @@ I have a venv of sprinkers_venv:
 ``` cd api ```  
 ``` pip3 install -r requirements.txt```
 
+### something about jenkins and i2c
+``` usermod -G i2c jenkins ```
+
 #### development of api
 ```uvicorn main:app --reload```  
 http://localhost:8000   

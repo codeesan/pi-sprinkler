@@ -6,7 +6,10 @@ from smbus2 import SMBus
 
 
 settings.init()
-bus = SMBus
+bus = SMBus(1)
+
+
+
 
 statuses = ["off", "on"]
 def sqlite_to_dict(statement):
@@ -44,9 +47,9 @@ def turn_on_valve(port):
     port -= 1
     shift = 1 << port
     this_address = 255 - shift
-    print(this_address)
+    print("this address: {0}".format(this_address))
     if side == 2:
-       result = bus.write_byte_data(0x27,0xff, this_address)
+       result = bus.write_byte_data(0x27,0xff,this_address)
     else:
        result =  bus.write_byte_data(0x27,this_address,0xff)
     return result
