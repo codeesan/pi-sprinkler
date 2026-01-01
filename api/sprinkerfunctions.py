@@ -54,7 +54,53 @@ def turn_on_valve(port):
        result =  bus.write_byte_data(0x27,this_address,0xff)
     return result
 
+def read_valve_bus(port:int):
+    """
+    Read the I2C device bytes that correspond to the given valve port and
+    return a dict with raw reads and an interpreted status ("on"/"off").
+    """
+    side = 1
+    orig_port = port
+    if port > 8:
+        side = 2
+        port -= 8
+    port -= 1
+    shift = 1 << port
+    this_address = 255 - shift
 
+    reg_read = None
+    val_read = None
+
+    try:
+        # Attempt to read the register that turn_on_valve sometimes uses as the register
+        reg_read = bus.read_byte_data(0x27, this_address)
+    except Exception:
+        reg_read = None
+
+    try:
+        # Attempt to read the alternate register (0xff) used in the other branch
+        val_read = bus.read_byte_data(0x27, 0xff)
+    except Exception:
+        val_read = None
+
+    # Prefer val_read (used as the written value in side==2), fall back to reg_read
+    raw = val_read if val_read is not None else reg_read
+
+    if raw is None:
+        return {"port": orig_port, "side": side, "this_address": this_address, "raw": None, "status": None, "error": "read failed"}
+
+    # If the bit for this valve is 0 it's treated as "on" (matching turn_on_valve which writes a 0 bit)
+    is_on = (raw & shift) == 0
+    status = statuses[1] if is_on else statuses[0]
+
+    return {
+        "port": orig_port,
+        "side": side,
+        "this_address": this_address,
+        "raw": raw,
+        "bit_mask": shift,
+        "status": status
+    }
 
 def turn_off_all_valves():
     result = bus.write_byte_data(0x27,0xff,0xff)

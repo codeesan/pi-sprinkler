@@ -107,12 +107,15 @@ def operate_valve(valve:int, set_status:str, response:Response):
     
 @app.get("/valves/checkstatus", status_code=200)
 def check_valve_status(valve:int, response:Response):
-    bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
-    result = get_valve_status(bcm)
-    return{"data":[{"Valve":valve,"Status": result }]}
-    # else:
-    #     response.status_code = status.HTTP_400_BAD_REQUEST
-    #     return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+    result = read_valve_bus(valve)
+    return{"data": result }
+    # bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
+    # result = get_valve_status(bcm)
+    # return{"data":[{"Valve":valve,"Status": result }]}
+    # # else:
+    # #     response.status_code = status.HTTP_400_BAD_REQUEST
+    # #     return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+
 
 @app.get("/valves/allstatus", status_code=200)
 def get_status_of_all_valve_bcm():
