@@ -8,10 +8,9 @@ from smbus2 import SMBus
 settings.init()
 bus = SMBus(1)
 
-
-
-
 statuses = ["off", "on"]
+
+
 def sqlite_to_dict(statement):
     result = []
     con = sqlite3.connect("sprinklers.db")
@@ -54,53 +53,35 @@ def turn_on_valve(port):
        result =  bus.write_byte_data(0x27,this_address,0xff)
     return result
 
-def read_valve_bus(port:int):
+
+relay_state = 0xFFFF
+def turn_on_valve_2(port):
     """
-    Read the I2C device bytes that correspond to the given valve port and
-    return a dict with raw reads and an interpreted status ("on"/"off").
+    Turn on a valve (relay) by port number (1-16)
+    LOW = ON, HIGH = OFF for relays
     """
-    side = 1
-    orig_port = port
-    if port > 8:
-        side = 2
-        port -= 8
-    port -= 1
-    shift = 1 << port
-    this_address = 255 - shift
+    global relay_state
+    
+    print(f"Turn on Valve {port}")
+    
+    if port < 1 or port > 16:
+        raise ValueError("Port must be between 1 and 16")
+    
+    # Convert to 0-based index (P0-P15)
+    pin = port - 1
+    
+    # Turn on relay by clearing the bit (set to 0)
+    relay_state &= ~(1 << pin)
+    
+    # Write new state
+    low_byte = relay_state & 0xFF
+    high_byte = (relay_state >> 8) & 0xFF
+    
+    print(f"Pin: P{pin}, State: 0x{relay_state:04X}")
+    
+    result = bus.write_byte_data(0x27, low_byte, high_byte)
+    return result
 
-    reg_read = None
-    val_read = None
-
-    try:
-        # Attempt to read the register that turn_on_valve sometimes uses as the register
-        reg_read = bus.read_byte_data(0x27, this_address)
-    except Exception:
-        reg_read = None
-
-    try:
-        # Attempt to read the alternate register (0xff) used in the other branch
-        val_read = bus.read_byte_data(0x27, 0xff)
-    except Exception:
-        val_read = None
-
-    # Prefer val_read (used as the written value in side==2), fall back to reg_read
-    raw = val_read if val_read is not None else reg_read
-
-    if raw is None:
-        return {"port": orig_port, "side": side, "this_address": this_address, "raw": None, "status": None, "error": "read failed"}
-
-    # If the bit for this valve is 0 it's treated as "on" (matching turn_on_valve which writes a 0 bit)
-    is_on = (raw & shift) == 0
-    status = statuses[1] if is_on else statuses[0]
-
-    return {
-        "port": orig_port,
-        "side": side,
-        "this_address": this_address,
-        "raw": raw,
-        "bit_mask": shift,
-        "status": status
-    }
 
 def turn_off_all_valves():
     result = bus.write_byte_data(0x27,0xff,0xff)
@@ -158,3 +139,138 @@ def get_all_valve_bcm_status():
 
 #     return result
     
+    
+def probe_i2c_registers(address: int = 0x27, regs=None):
+    """Probe a list of I2C register addresses on the given device and return
+    a dictionary mapping register -> read result (int) or exception string.
+
+    This is defensive: hardware reads can raise IOError/OSError when a
+    register isn't present. We catch exceptions and return the exception
+    string so the caller can inspect which registers responded.
+    """
+    if regs is None:
+        # common small-registers plus 0xff which the write code uses
+        regs = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xff]
+
+    results = {}
+    for r in regs:
+        try:
+            val = bus.read_byte_data(address, r)
+            results[r] = val
+        except Exception as e:
+            # store the exception string so the caller can see failures
+            results[r] = f"ERROR: {type(e).__name__}: {e}"
+    return results
+
+
+def read_both_sides(address: int = 0x27):
+    """Convenience wrapper to read candidate registers for both sides/banks.
+
+    Because the existing `turn_on_valve` code uses different register/value
+    orders for side 1 vs side 2, it's unclear which register(s) map to the
+    two 8-bit banks. This function probes a set of common registers and
+    returns whatever values the device answers with so you can identify
+    which registers correspond to "side 1" and "side 2".
+
+    Returns a dict mapping register -> value or error string.
+    """
+    # If running in a dev mode where hardware isn't available, return
+    # predictable dummy values to avoid exceptions.
+    try:
+        if getattr(settings, "devmode", False):
+            return {0x00: 0xFF, 0x01: 0xFF}
+    except Exception:
+        # if settings doesn't have devmode, proceed to probe
+        pass
+
+    regs_to_try = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xff]
+    return probe_i2c_registers(address, regs_to_try)
+
+
+def demo_probe_and_print(address: int = 0x27):
+    """Small safe demo helper that prints probe results.
+
+    Use this from a REPL or a small script to inspect what the expander
+    returns for different register addresses. The function catches
+    exceptions and prints them rather than raising.
+    """
+    results = read_both_sides(address)
+    pprint(results)
+    return results
+
+
+def detect_bank_mapping(port: int, address: int = 0x27, regs=None, restore=True):
+    """Auto-detect which I2C register and bit correspond to the given valve port.
+
+    Procedure:
+    - Probe a set of registers (using `regs` or defaults) before any change.
+    - Toggle the valve on using existing `turn_on_valve(port)`.
+    - Re-probe the same registers and compute differences.
+    - Turn off all valves to restore state (if `restore` True).
+
+    Returns a dict with:
+    - before: {reg: val_or_error}
+    - after: {reg: val_or_error}
+    - diffs: {reg: {'before': val, 'after': val, 'xor': xor, 'changed_bits': [bit_indexes]}}
+    - inferred_side: 1 or 2 (based on port > 8 logic)
+    - probe_regs: list of registers probed
+
+    Notes:
+    - This performs an actual hardware write using `turn_on_valve`. If your
+      environment sets `settings.devmode`, the function will still run but
+      may use dev-safe behavior defined elsewhere.
+    - If a register read raises an exception, the exception string is stored
+      in the before/after maps and that register will not be considered for
+      diffs.
+    """
+    if regs is None:
+        regs = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xff]
+
+    result = {
+        'probe_regs': regs,
+        'before': {},
+        'after': {},
+        'diffs': {},
+        'inferred_side': 1 if port <= 8 else 2,
+    }
+
+    # Probe before
+    before = probe_i2c_registers(address, regs)
+    result['before'] = before
+
+    # Attempt to turn on the valve. Catch and record any errors but continue.
+    try:
+        turn_on_valve(port)
+    except Exception as e:
+        result.setdefault('errors', []).append(f"turn_on_valve error: {type(e).__name__}: {e}")
+
+    # Probe after
+    after = probe_i2c_registers(address, regs)
+    result['after'] = after
+
+    # Compute diffs (only for integer reads)
+    for r in regs:
+        b = before.get(r)
+        a = after.get(r)
+        # only compute diffs if both are ints
+        if isinstance(b, int) and isinstance(a, int):
+            xor = b ^ a
+            changed_bits = []
+            if xor != 0:
+                for bit in range(8):
+                    if xor & (1 << bit):
+                        changed_bits.append(bit)
+            result['diffs'][r] = {'before': b, 'after': a, 'xor': xor, 'changed_bits': changed_bits}
+        else:
+            # store the raw values if not ints
+            result['diffs'][r] = {'before': b, 'after': a, 'xor': None, 'changed_bits': []}
+
+    # Restore device state: turn off all valves (best-effort)
+    if restore:
+        try:
+            turn_off_all_valves()
+        except Exception as e:
+            result.setdefault('errors', []).append(f"turn_off_all_valves error: {type(e).__name__}: {e}")
+
+    return result
+

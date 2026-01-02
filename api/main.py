@@ -92,7 +92,8 @@ def operate_valve(valve:int, set_status:str, response:Response):
     
     #check for valid input
     if set_status == "on":
-        result = turn_on_valve(valve)
+        #result = turn_on_valve(valve)
+        result = turn_on_valve_2(valve)
     elif set_status == "off":
         result = turn_off_all_valves()
     else:
@@ -107,7 +108,8 @@ def operate_valve(valve:int, set_status:str, response:Response):
     
 @app.get("/valves/checkstatus", status_code=200)
 def check_valve_status(valve:int, response:Response):
-    result = read_valve_bus(valve)
+    #result = read_valve_bus(valve)
+    result = None
     return{"data": result }
     # bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
     # result = get_valve_status(bcm)
@@ -115,6 +117,7 @@ def check_valve_status(valve:int, response:Response):
     # # else:
     # #     response.status_code = status.HTTP_400_BAD_REQUEST
     # #     return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+
 
 
 @app.get("/valves/allstatus", status_code=200)
