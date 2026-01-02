@@ -60,6 +60,8 @@ def turn_on_valve_2(port):
     Turn on a valve (relay) by port number (1-16)
     LOW = ON, HIGH = OFF for relays
     """
+    turn_off_all_valves()
+
     global relay_state
     
     print(f"Turn on Valve {port}")
@@ -80,6 +82,7 @@ def turn_on_valve_2(port):
     print(f"Pin: P{pin}, State: 0x{relay_state:04X}")
     
     result = bus.write_byte_data(0x27, low_byte, high_byte)
+    print(f"I2C Write Result: {result}")
     return result
 
 
