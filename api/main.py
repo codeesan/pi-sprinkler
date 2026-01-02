@@ -100,7 +100,7 @@ def operate_valve(valve:int, set_status:str, response:Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return{"data":"Aborting - valid status for set is on or off"}
     
-    if result == True:
+    if result == None:
         return{"data":"Valve {0} set to {1}. result: {2}".format(valve,set_status,result)}
     else:
         response.status_code = status.HTTP_400_BAD_REQUEST
