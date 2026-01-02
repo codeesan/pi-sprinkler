@@ -60,7 +60,8 @@ def turn_on_valve_2(port):
     Turn on a valve (relay) by port number (1-16)
     LOW = ON, HIGH = OFF for relays
     """
-    turn_off_all_valves()
+    #turn_off_all_valves()
+    bus.write_byte_data(0x27,0xff,0xff)
 
     global relay_state
     
