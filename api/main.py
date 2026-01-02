@@ -101,10 +101,10 @@ def operate_valve(valve:int, set_status:str, response:Response):
         return{"data":"Aborting - valid status for set is on or off"}
     
     if result == True:
-        return{"data":"Valve {0} set to {1}".format(valve,set_status)}
+        return{"data":"Valve {0} set to {1}. result: {2}".format(valve,set_status,result)}
     else:
         response.status_code = status.HTTP_400_BAD_REQUEST
-        return{"data":"Aborting - Something went wrong."}
+        return{"data":"Aborting - Something went wrong. result: {0}".format(result)}
     
 @app.get("/valves/checkstatus", status_code=200)
 def check_valve_status(valve:int, response:Response):
