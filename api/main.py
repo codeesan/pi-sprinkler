@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Response, status
 from fastapi.encoders import jsonable_encoder
-from sprinkerfunctions import *
+from api.sprinklerfunctions import *
 from sprinkerModels import Valve, ZoneName
 from factory_reset import factory_reset
 import settings
