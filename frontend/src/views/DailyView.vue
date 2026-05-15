@@ -329,6 +329,11 @@ function openRunDialog(zone) {
 
 async function onManualRunConfirm({ zone, duration }) {
   await runZone(zone.id, duration)
+  if (state.error) {
+    showSnack(state.error, 'error', 'mdi-alert')
+    state.error = null
+    return
+  }
   showSnack(`${zone.name} started`, 'primary', 'mdi-water')
 }
 

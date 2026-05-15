@@ -224,11 +224,14 @@ export function useSprinklers() {
     const zone = state.zones.find((z) => z.id === zoneId)
     if (!zone) return
     try {
-      await apiFetch(`/zones/${zoneId}/run`, { method: 'POST' })
+      const path = durationOverride
+        ? `/zones/${zoneId}/run?duration_minutes=${durationOverride}`
+        : `/zones/${zoneId}/run`
+      await apiFetch(path, { method: 'POST' })
       zone.status = STATUS.RUNNING
       zone.timeRemaining = durationOverride ?? zone.duration
-    } catch {
-      state.error = `Failed to start zone`
+    } catch (e) {
+      state.error = e.message || 'Failed to start zone'
     }
   }
 
