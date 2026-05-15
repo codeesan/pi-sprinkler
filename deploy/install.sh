@@ -74,6 +74,12 @@ sed "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
 ln -sf "$NGINX_DST" /etc/nginx/sites-enabled/sprinkler
 rm -f /etc/nginx/sites-enabled/default
 
+# Allow nginx (www-data) to traverse the home directory and read dist/
+# Home dirs are often 700 by default — www-data needs execute to traverse.
+DEPLOY_HOME="$(eval echo ~"$DEPLOY_USER")"
+chmod o+x "$DEPLOY_HOME"
+chmod -R o+rX "$FRONTEND_DIR/dist"
+
 nginx -t
 systemctl enable nginx
 systemctl restart nginx
