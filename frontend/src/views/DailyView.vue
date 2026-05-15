@@ -328,19 +328,22 @@ function openRunDialog(zone) {
 }
 
 async function onManualRunConfirm({ zone, duration }) {
-  await runZone(zone.id, duration)
-  if (state.error) {
-    showSnack(state.error, 'error', 'mdi-alert')
-    state.error = null
-    return
+  try {
+    await runZone(zone.id, duration)
+    showSnack(`${zone.name} started`, 'primary', 'mdi-water')
+  } catch (e) {
+    showSnack(e.message || 'Failed to start zone', 'error', 'mdi-alert')
   }
-  showSnack(`${zone.name} started`, 'primary', 'mdi-water')
 }
 
-function handleRunSchedule(scheduleId) {
+async function handleRunSchedule(scheduleId) {
   const schedule = state.schedules.find((s) => s.id === scheduleId)
-  runSchedule(scheduleId)
-  showSnack(`Running "${schedule?.name}"`, 'primary', 'mdi-play')
+  try {
+    await runSchedule(scheduleId)
+    showSnack(`Running "${schedule?.name}"`, 'primary', 'mdi-play')
+  } catch (e) {
+    showSnack(e.message || 'Failed to start schedule', 'error', 'mdi-alert')
+  }
 }
 
 function handlePauseSchedule() {

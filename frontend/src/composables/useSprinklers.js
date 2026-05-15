@@ -223,16 +223,12 @@ export function useSprinklers() {
   async function runZone(zoneId, durationOverride) {
     const zone = state.zones.find((z) => z.id === zoneId)
     if (!zone) return
-    try {
-      const path = durationOverride
-        ? `/zones/${zoneId}/run?duration_minutes=${durationOverride}`
-        : `/zones/${zoneId}/run`
-      await apiFetch(path, { method: 'POST' })
-      zone.status = STATUS.RUNNING
-      zone.timeRemaining = durationOverride ?? zone.duration
-    } catch (e) {
-      state.error = e.message || 'Failed to start zone'
-    }
+    const path = durationOverride
+      ? `/zones/${zoneId}/run?duration_minutes=${durationOverride}`
+      : `/zones/${zoneId}/run`
+    await apiFetch(path, { method: 'POST' })
+    zone.status = STATUS.RUNNING
+    zone.timeRemaining = durationOverride ?? zone.duration
   }
 
   async function stopZone(zoneId) {
@@ -255,13 +251,22 @@ export function useSprinklers() {
   }
 
   // --- Schedule run controls ---
-  function runSchedule(scheduleId) {
+  async function runSchedule(scheduleId) {
     const schedule = state.schedules.find((s) => s.id === scheduleId)
     if (!schedule || !schedule.enabled) return
     state.activeScheduleId = scheduleId
     state.activeScheduleZoneIndex = 0
     const firstZoneId = schedule.zoneIds[0]
-    if (firstZoneId) runZone(firstZoneId)
+    if (firstZoneId) {
+      try {
+        await runZone(firstZoneId)
+      } catch (e) {
+        state.error = e.message || 'Failed to start schedule'
+        state.activeScheduleId = null
+        state.activeScheduleZoneIndex = 0
+        throw e
+      }
+    }
   }
 
   function pauseSchedule() {
