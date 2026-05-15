@@ -50,6 +50,15 @@
               <div class="text-caption" style="color: rgba(255,255,255,0.75)">
                 {{ weather.condition }}
               </div>
+              <div v-if="weather.precipProbability != null" class="d-flex align-center gap-1 mt-1">
+                <v-icon icon="mdi-water-percent" size="12" color="white" style="opacity:0.8" />
+                <span class="text-caption" style="color: rgba(255,255,255,0.75)">
+                  {{ weather.precipProbability }}% rain
+                  <template v-if="weather.precipitationToday > 0">
+                    &middot; {{ weather.precipitationToday }}" today
+                  </template>
+                </span>
+              </div>
             </div>
           </div>
         </v-col>
@@ -120,6 +129,22 @@
           </div>
         </template>
       </div>
+
+      <!-- Rain advisory -->
+      <v-alert
+        v-if="weather.rainLikely && !anyActive"
+        type="info"
+        variant="tonal"
+        density="compact"
+        rounded="lg"
+        icon="mdi-weather-rainy"
+        class="mb-3"
+        style="background: rgba(255,255,255,0.15); color: white;"
+      >
+        <span class="text-caption">
+          Rain likely today{{ weather.precipProbability ? ` (${weather.precipProbability}%)` : '' }} — consider skipping watering.
+        </span>
+      </v-alert>
 
       <!-- Action buttons -->
       <div class="d-flex gap-2 flex-wrap">

@@ -96,3 +96,14 @@ class AppSettings(BaseModel):
 class AppSettingsUpdate(BaseModel):
     name: Optional[str] = None
     location: Optional[LocationData] = None
+
+
+class WeatherData(BaseModel):
+    temperature: float          # °F, current
+    weather_code: int
+    condition: str              # human-readable WMO label
+    icon: str                   # mdi icon name
+    precipitation_today: float  # inches fallen today
+    precip_probability: int     # % max chance of rain today
+    rain_likely: bool           # True when precip_probability >= 50 or precipitation_today > 0.1
+    fetched_at: str             # ISO UTC timestamp of last fetch

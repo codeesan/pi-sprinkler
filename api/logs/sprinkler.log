@@ -9,3 +9,13 @@
 2026-05-15T11:45:11Z  INFO      Sprinkler system started
 2026-05-15T11:45:26Z  INFO      Sprinkler system started
 2026-05-15T11:45:35Z  INFO      Sprinkler system started
+2026-05-15T14:02:04Z  INFO      Schedule 'Front Yard' started (4 zones)
+2026-05-15T14:02:04Z  INFO      Schedule 'Front Yard': Front Yard North started (7 min)
+2026-05-15T14:09:04Z  INFO      Schedule 'Front Yard': Front Yard South - West started (7 min)
+2026-05-15T14:17:15Z  INFO      Schedule 'Front Yard': Front Yard South - East started (7 min)
+2026-05-15T14:27:41Z  INFO      Schedule 'Front Yard': Front Yard Flowers started (15 min)
+2026-05-15T14:43:12Z  INFO      Schedule 'Front Yard' completed
+2026-05-15T15:06:36Z  INFO      Sprinkler system started
+2026-05-15T15:06:40Z  INFO      Sprinkler system started
+2026-05-15T15:06:43Z  INFO      Sprinkler system started
+2026-05-15T15:07:02Z  INFO      Sprinkler system started

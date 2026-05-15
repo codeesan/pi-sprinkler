@@ -2,7 +2,7 @@ import sys
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -28,6 +28,7 @@ from models import (
     SystemStatus, RunningZone, ActiveSchedule,
     HistoryEvent,
     AppSettings, AppSettingsUpdate,
+    WeatherData,
 )
 
 # ---------------------------------------------------------------------------
@@ -253,6 +254,93 @@ def write_settings(body: AppSettingsUpdate):
         name=data["name"],
         location=data["location"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Weather  (cached 30 min; fetched server-side so the Pi can act on rain data)
+# ---------------------------------------------------------------------------
+_WMO_MAP = [
+    ([0],                   'mdi-weather-sunny',           'Clear'),
+    ([1],                   'mdi-weather-sunny',           'Mostly Clear'),
+    ([2],                   'mdi-weather-partly-cloudy',   'Partly Cloudy'),
+    ([3],                   'mdi-weather-cloudy',          'Overcast'),
+    ([45, 48],              'mdi-weather-fog',             'Foggy'),
+    ([51,52,53,54,55],      'mdi-weather-rainy',           'Drizzle'),
+    ([61,62,63,64,65],      'mdi-weather-rainy',           'Rain'),
+    ([66, 67],              'mdi-weather-snowy-rainy',     'Freezing Rain'),
+    ([71,72,73,74,75,77],   'mdi-weather-snowy',           'Snow'),
+    ([80, 81, 82],          'mdi-weather-pouring',         'Rain Showers'),
+    ([85, 86],              'mdi-weather-snowy',           'Snow Showers'),
+    ([95],                  'mdi-weather-lightning-rainy', 'Thunderstorm'),
+    ([96, 99],              'mdi-weather-lightning-rainy', 'Severe Thunderstorm'),
+]
+
+def _resolve_wmo(code: int) -> tuple[str, str]:
+    for codes, icon, label in _WMO_MAP:
+        if code in codes:
+            return icon, label
+    return 'mdi-weather-cloudy', 'Unknown'
+
+_weather_cache: WeatherData | None = None
+_weather_cached_at: datetime | None = None
+_WEATHER_TTL = timedelta(minutes=30)
+
+
+@app.get("/weather", response_model=WeatherData)
+async def get_weather():
+    global _weather_cache, _weather_cached_at
+
+    # Serve from cache if still fresh
+    now = datetime.now(timezone.utc)
+    if _weather_cache and _weather_cached_at and (now - _weather_cached_at) < _WEATHER_TTL:
+        return _weather_cache
+
+    # Load coordinates from settings
+    with get_db() as con:
+        s = get_settings(con)
+    lat = s["location"].get("lat")
+    lon = s["location"].get("lon")
+    if lat is None or lon is None:
+        raise HTTPException(status_code=404, detail="Location not configured in settings")
+
+    # Fetch from Open-Meteo (free, no API key required)
+    import urllib.request, json as _json
+    url = (
+        f"https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}"
+        f"&current=temperature_2m,weather_code,precipitation"
+        f"&daily=precipitation_sum,precipitation_probability_max"
+        f"&temperature_unit=fahrenheit&precipitation_unit=inch"
+        f"&timezone=auto&forecast_days=1"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = _json.loads(resp.read())
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Weather fetch failed: {exc}")
+
+    current        = data["current"]
+    daily          = data["daily"]
+    temp           = round(current["temperature_2m"], 1)
+    code           = int(current["weather_code"])
+    precip_now     = float(current.get("precipitation") or 0)
+    precip_today   = float((daily.get("precipitation_sum") or [0])[0] or 0)
+    precip_prob    = int((daily.get("precipitation_probability_max") or [0])[0] or 0)
+    icon, label    = _resolve_wmo(code)
+    rain_likely    = precip_prob >= 50 or precip_today > 0.1
+
+    _weather_cache = WeatherData(
+        temperature=temp,
+        weather_code=code,
+        condition=label,
+        icon=icon,
+        precipitation_today=round(precip_today, 2),
+        precip_probability=precip_prob,
+        rain_likely=rain_likely,
+        fetched_at=now.isoformat(),
+    )
+    _weather_cached_at = now
+    return _weather_cache
 
 
 # ---------------------------------------------------------------------------
