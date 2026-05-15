@@ -107,6 +107,9 @@ async def _run_schedule_sequence(zone_ids: list[str], run_one_fn) -> None:
 
 async def _execute_schedule(schedule_id: str) -> None:
     """APScheduler callback: runs all zones in a schedule sequentially."""
+    # TODO: prompt user about postponing watering once notifications have been added.
+    # Check _weather_cache.rain_likely here and send a notification asking whether
+    # to skip this run before proceeding.
     with get_db() as con:
         schedule = get_schedule(con, schedule_id)
     if not schedule:
