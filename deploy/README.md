@@ -14,13 +14,13 @@
 ```bash
 # From your Mac, rsync the project over (adjust hostname/path as needed)
 rsync -av --exclude node_modules --exclude __pycache__ --exclude sprinklers_venv \
-  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/sprinklers/
+  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/workspace/sprinklers/
 ```
 
 ### 2. Run the install script on the Pi
 SSH into the Pi, then:
 ```bash
-cd ~/sprinklers
+cd ~/workspace/sprinklers
 sudo bash deploy/install.sh
 ```
 
@@ -51,10 +51,10 @@ Open a browser to `http://raspberrypi.local` (or the Pi's IP address).
 ```bash
 # From your Mac — push new code
 rsync -av --exclude node_modules --exclude __pycache__ --exclude sprinklers_venv \
-  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/sprinklers/
+  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/workspace/sprinklers/
 
 # On the Pi — rebuild frontend and restart API
-cd ~/sprinklers
+cd ~/workspace/sprinklers
 source sprinklers_venv/bin/activate
 cd frontend && npm run build && cd ..
 sudo systemctl restart sprinkler-api
