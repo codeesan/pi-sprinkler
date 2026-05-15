@@ -327,8 +327,8 @@ function openRunDialog(zone) {
   runDialogOpen.value = true
 }
 
-function onManualRunConfirm({ zone, duration }) {
-  runZone(zone.id, duration)
+async function onManualRunConfirm({ zone, duration }) {
+  await runZone(zone.id, duration)
   showSnack(`${zone.name} started`, 'primary', 'mdi-water')
 }
 
@@ -348,8 +348,8 @@ function handleResumeAll() {
   showSnack('All zones resumed', 'primary', 'mdi-play')
 }
 
-function handleStopAll() {
-  stopAll()
+async function handleStopAll() {
+  await stopAll()
   showSnack('All zones stopped', 'error', 'mdi-stop')
 }
 

@@ -145,7 +145,7 @@
 
             <!-- Step 2: Days of week -->
             <div class="text-caption font-weight-medium text-medium-emphasis mb-2">Days of Week</div>
-            <div class="d-flex flex-wrap gap-2 mb-5">
+            <div class="d-flex flex-wrap gap-2 mb-1">
               <v-chip
                 v-for="day in daysOfWeek"
                 :key="day"
@@ -159,6 +159,8 @@
                 {{ day }}
               </v-chip>
             </div>
+            <div v-if="daysError" class="text-caption text-error mb-3 mt-1">{{ daysError }}</div>
+            <div v-else class="mb-5" />
 
             <!-- Step 3: Start times -->
             <div class="d-flex align-center justify-space-between mb-2">
@@ -177,12 +179,12 @@
 
             <div
               v-if="form.startTimes.length === 0"
-              class="text-caption text-medium-emphasis mb-4 pa-3 rounded-lg bg-surface-variant"
+              class="text-caption text-medium-emphasis mb-1 pa-3 rounded-lg bg-surface-variant"
             >
               No start times. Click "Add Time" above.
             </div>
 
-            <div class="d-flex flex-column gap-2 mb-5">
+            <div class="d-flex flex-column gap-2">
               <div
                 v-for="(time, idx) in form.startTimes"
                 :key="idx"
@@ -208,6 +210,8 @@
                 />
               </div>
             </div>
+            <div v-if="timesError" class="text-caption text-error mb-3 mt-1">{{ timesError }}</div>
+            <div v-else class="mb-5" />
 
             <!-- Step 4: Zone selector and ordering -->
             <div class="d-flex align-center justify-space-between mb-2">
@@ -232,6 +236,8 @@
                 No zones configured. Add zones in the Zones tab first.
               </div>
             </div>
+
+            <div v-if="zonesError" class="text-caption text-error mb-2">{{ zonesError }}</div>
 
             <!-- Ordered zone list with up/down reordering -->
             <div v-if="form.zoneIds.length > 0" class="mb-4">
@@ -361,11 +367,18 @@ const form = reactive({
   zoneIds: [],
 })
 
+const daysError = ref('')
+const timesError = ref('')
+const zonesError = ref('')
+
 function resetForm() {
   form.name = ''
   form.days = []
   form.startTimes = []
   form.zoneIds = []
+  daysError.value = ''
+  timesError.value = ''
+  zonesError.value = ''
 }
 
 function openAddDialog() {
@@ -388,11 +401,13 @@ function toggleDay(day) {
   const idx = form.days.indexOf(day)
   if (idx === -1) form.days.push(day)
   else form.days.splice(idx, 1)
+  daysError.value = ''
 }
 
 // Times
 function addTime() {
   form.startTimes.push('06:00')
+  timesError.value = ''
 }
 
 function removeTime(idx) {
@@ -408,6 +423,7 @@ function toggleZone(zoneId) {
   const idx = form.zoneIds.indexOf(zoneId)
   if (idx === -1) form.zoneIds.push(zoneId)
   else form.zoneIds.splice(idx, 1)
+  zonesError.value = ''
 }
 
 function moveZone(idx, direction) {
@@ -424,7 +440,12 @@ function removeZone(zoneId) {
 
 async function submitForm() {
   const { valid } = await formRef.value.validate()
-  if (!valid) return
+
+  daysError.value = form.days.length === 0 ? 'Select at least one day' : ''
+  timesError.value = form.startTimes.length === 0 ? 'Add at least one start time' : ''
+  zonesError.value = form.zoneIds.length === 0 ? 'Select at least one zone' : ''
+
+  if (!valid || daysError.value || timesError.value || zonesError.value) return
 
   const payload = {
     name: form.name,
@@ -434,10 +455,12 @@ async function submitForm() {
   }
 
   if (editingSchedule.value) {
-    updateSchedule(editingSchedule.value.id, payload)
+    await updateSchedule(editingSchedule.value.id, payload)
+    if (state.error) { showSnack(state.error, 'error'); state.error = null; return }
     showSnack(`"${form.name}" updated`, 'primary')
   } else {
-    addSchedule(payload)
+    await addSchedule(payload)
+    if (state.error) { showSnack(state.error, 'error'); state.error = null; return }
     showSnack(`"${form.name}" created`, 'success')
   }
   formDialogOpen.value = false
@@ -452,10 +475,10 @@ function confirmDelete(schedule) {
   deleteDialogOpen.value = true
 }
 
-function doDelete() {
+async function doDelete() {
   if (deletingSchedule.value) {
     const name = deletingSchedule.value.name
-    deleteSchedule(deletingSchedule.value.id)
+    await deleteSchedule(deletingSchedule.value.id)
     showSnack(`"${name}" deleted`, 'error')
   }
   deleteDialogOpen.value = false

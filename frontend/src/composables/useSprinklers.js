@@ -1,6 +1,7 @@
-import { reactive, computed, watch } from 'vue'
+import { reactive, computed } from 'vue'
 
-// Status constants
+const API_BASE = `http://${window.location.hostname}:8000`
+
 export const STATUS = {
   IDLE: 'idle',
   RUNNING: 'running',
@@ -8,85 +9,53 @@ export const STATUS = {
   ERROR: 'error',
 }
 
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  })
+  if (res.status === 204) return null
+  if (!res.ok) {
+    let detail = `Request failed (${res.status})`
+    try { detail = (await res.json()).detail ?? detail } catch {}
+    throw new Error(detail)
+  }
+  return res.json()
+}
+
+function hydrateZone(zone) {
+  return { ...zone, status: STATUS.IDLE, timeRemaining: 0 }
+}
+
 // Shared singleton state — all components share this instance
 const state = reactive({
-  zones: [
-    {
-      id: 'zone-1',
-      name: 'Front Lawn Left',
-      port: 1,
-      duration: 15,
-      status: STATUS.IDLE,
-      timeRemaining: 0,
-      icon: 'mdi-grass',
-      color: 'secondary',
-    },
-    {
-      id: 'zone-2',
-      name: 'Front Lawn Right',
-      port: 2,
-      duration: 15,
-      status: STATUS.IDLE,
-      timeRemaining: 0,
-      icon: 'mdi-grass',
-      color: 'secondary',
-    },
-    {
-      id: 'zone-3',
-      name: 'Front Lawn Drip',
-      port: 3,
-      duration: 20,
-      status: STATUS.RUNNING,
-      timeRemaining: 12,
-      icon: 'mdi-water',
-      color: 'accent',
-    },
-    {
-      id: 'zone-4',
-      name: 'Back Yard',
-      port: 4,
-      duration: 20,
-      status: STATUS.IDLE,
-      timeRemaining: 0,
-      icon: 'mdi-leaf',
-      color: 'primary',
-    },
-    {
-      id: 'zone-5',
-      name: 'Rose Garden',
-      port: 5,
-      duration: 10,
-      status: STATUS.PAUSED,
-      timeRemaining: 7,
-      icon: 'mdi-flower',
-      color: 'error',
-    },
-  ],
-
-  schedules: [
-    {
-      id: 'sched-1',
-      name: 'Front Yard',
-      days: ['Mon', 'Wed', 'Fri'],
-      startTimes: ['06:00'],
-      zoneIds: ['zone-1', 'zone-2', 'zone-3'],
-      enabled: true,
-    },
-    {
-      id: 'sched-2',
-      name: 'Back Yard',
-      days: ['Tue', 'Thu', 'Sat'],
-      startTimes: ['07:00'],
-      zoneIds: ['zone-4', 'zone-5'],
-      enabled: true,
-    },
-  ],
-
+  zones: [],
+  schedules: [],
+  loading: false,
+  error: null,
   activeScheduleId: null,
   activeScheduleZoneIndex: 0,
-  nextZoneNum: 6,
-  nextSchedNum: 3,
 })
+
+async function initialize() {
+  state.loading = true
+  state.error = null
+  try {
+    const [zones, schedules] = await Promise.all([
+      apiFetch('/zones'),
+      apiFetch('/schedules'),
+    ])
+    state.zones = zones.map(hydrateZone)
+    state.schedules = schedules
+  } catch {
+    state.error = 'Could not load data from server'
+  } finally {
+    state.loading = false
+  }
+}
+
+// Load on first import
+initialize()
 
 export function useSprinklers() {
   // --- Computed ---
@@ -122,7 +91,6 @@ export function useSprinklers() {
           const targetDay = DAY_MAP[dayAbbr]
           if (targetDay === undefined) continue
           let daysAhead = (targetDay - now.getDay() + 7) % 7
-          // If it's today but the time has already passed, skip to next week
           if (
             daysAhead === 0 &&
             (now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m))
@@ -138,7 +106,7 @@ export function useSprinklers() {
         }
       }
     }
-    return best // { schedule, date }
+    return best
   })
 
   const nextZone = computed(() => {
@@ -151,48 +119,73 @@ export function useSprinklers() {
   })
 
   // --- Zone CRUD ---
-  function addZone(zone) {
-    const id = `zone-${state.nextZoneNum++}`
-    state.zones.push({
-      id,
-      name: zone.name,
-      port: zone.port,
-      duration: zone.duration,
-      status: STATUS.IDLE,
-      timeRemaining: 0,
-      icon: zone.icon || 'mdi-water',
-      color: zone.color || 'primary',
-    })
+  async function addZone(zone) {
+    try {
+      const created = await apiFetch('/zones', {
+        method: 'POST',
+        body: JSON.stringify(zone),
+      })
+      state.zones.push(hydrateZone(created))
+    } catch {
+      state.error = 'Failed to add zone'
+    }
   }
 
-  function updateZone(id, updates) {
+  async function updateZone(id, updates) {
     const zone = state.zones.find((z) => z.id === id)
-    if (zone) Object.assign(zone, updates)
+    if (!zone) return
+    const prev = { ...zone }
+    Object.assign(zone, updates)
+    try {
+      const { id: _id, status: _s, timeRemaining: _tr, ...body } = zone
+      const updated = await apiFetch(`/zones/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      })
+      Object.assign(zone, updated)
+    } catch {
+      Object.assign(zone, prev)
+      state.error = 'Failed to update zone'
+    }
   }
 
-  function deleteZone(id) {
-    const idx = state.zones.findIndex((z) => z.id === id)
-    if (idx !== -1) state.zones.splice(idx, 1)
-    // Remove this zone from any schedules that reference it
-    state.schedules.forEach((s) => {
-      const zIdx = s.zoneIds.indexOf(id)
-      if (zIdx !== -1) s.zoneIds.splice(zIdx, 1)
-    })
+  async function deleteZone(id) {
+    try {
+      await apiFetch(`/zones/${id}`, { method: 'DELETE' })
+      const idx = state.zones.findIndex((z) => z.id === id)
+      if (idx !== -1) state.zones.splice(idx, 1)
+      state.schedules.forEach((s) => {
+        const zIdx = s.zoneIds.indexOf(id)
+        if (zIdx !== -1) s.zoneIds.splice(zIdx, 1)
+      })
+    } catch {
+      state.error = 'Failed to delete zone'
+    }
   }
 
   // --- Zone run controls ---
-  function runZone(zoneId, durationOverride) {
+  async function runZone(zoneId, durationOverride) {
     const zone = state.zones.find((z) => z.id === zoneId)
     if (!zone) return
-    zone.status = STATUS.RUNNING
-    zone.timeRemaining = durationOverride ?? zone.duration
+    try {
+      await apiFetch(`/zones/${zoneId}/run`, { method: 'POST' })
+      zone.status = STATUS.RUNNING
+      zone.timeRemaining = durationOverride ?? zone.duration
+    } catch {
+      state.error = `Failed to start zone`
+    }
   }
 
-  function stopZone(zoneId) {
+  async function stopZone(zoneId) {
     const zone = state.zones.find((z) => z.id === zoneId)
     if (!zone) return
-    zone.status = STATUS.IDLE
-    zone.timeRemaining = 0
+    try {
+      await apiFetch(`/zones/${zoneId}/stop`, { method: 'POST' })
+      zone.status = STATUS.IDLE
+      zone.timeRemaining = 0
+    } catch {
+      state.error = `Failed to stop zone`
+    }
   }
 
   function pauseZone(zoneId) {
@@ -209,13 +202,7 @@ export function useSprinklers() {
     state.activeScheduleId = scheduleId
     state.activeScheduleZoneIndex = 0
     const firstZoneId = schedule.zoneIds[0]
-    if (firstZoneId) {
-      const zone = state.zones.find((z) => z.id === firstZoneId)
-      if (zone) {
-        zone.status = STATUS.RUNNING
-        zone.timeRemaining = zone.duration
-      }
-    }
+    if (firstZoneId) runZone(firstZoneId)
   }
 
   function pauseSchedule() {
@@ -224,13 +211,19 @@ export function useSprinklers() {
     })
   }
 
-  function stopAll() {
-    state.activeScheduleId = null
-    state.activeScheduleZoneIndex = 0
-    state.zones.forEach((zone) => {
-      zone.status = STATUS.IDLE
-      zone.timeRemaining = 0
-    })
+  async function stopAll() {
+    try {
+      await apiFetch('/valves/stop-all', { method: 'POST' })
+    } catch {
+      state.error = 'Failed to stop all valves'
+    } finally {
+      state.activeScheduleId = null
+      state.activeScheduleZoneIndex = 0
+      state.zones.forEach((zone) => {
+        zone.status = STATUS.IDLE
+        zone.timeRemaining = 0
+      })
+    }
   }
 
   function resumeAll() {
@@ -240,27 +233,50 @@ export function useSprinklers() {
   }
 
   // --- Schedule CRUD ---
-  function addSchedule(schedule) {
-    const id = `sched-${state.nextSchedNum++}`
-    state.schedules.push({
-      id,
-      name: schedule.name,
+  async function addSchedule(schedule) {
+    try {
+      const created = await apiFetch('/schedules', {
+        method: 'POST',
+        body: JSON.stringify(schedule),
+      })
+      state.schedules.push(created)
+    } catch {
+      state.error = 'Failed to add schedule'
+    }
+  }
+
+  async function updateSchedule(id, updates) {
+    const schedule = state.schedules.find((s) => s.id === id)
+    if (!schedule) return
+    const prev = {
+      ...schedule,
       days: [...schedule.days],
       startTimes: [...schedule.startTimes],
       zoneIds: [...schedule.zoneIds],
-      enabled: schedule.enabled ?? true,
-    })
+    }
+    Object.assign(schedule, updates)
+    try {
+      const { id: _id, ...body } = schedule
+      const updated = await apiFetch(`/schedules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      })
+      Object.assign(schedule, updated)
+    } catch {
+      Object.assign(schedule, prev)
+      state.error = 'Failed to update schedule'
+    }
   }
 
-  function updateSchedule(id, updates) {
-    const schedule = state.schedules.find((s) => s.id === id)
-    if (schedule) Object.assign(schedule, updates)
-  }
-
-  function deleteSchedule(id) {
-    const idx = state.schedules.findIndex((s) => s.id === id)
-    if (idx !== -1) state.schedules.splice(idx, 1)
-    if (state.activeScheduleId === id) state.activeScheduleId = null
+  async function deleteSchedule(id) {
+    try {
+      await apiFetch(`/schedules/${id}`, { method: 'DELETE' })
+      const idx = state.schedules.findIndex((s) => s.id === id)
+      if (idx !== -1) state.schedules.splice(idx, 1)
+      if (state.activeScheduleId === id) state.activeScheduleId = null
+    } catch {
+      state.error = 'Failed to delete schedule'
+    }
   }
 
   return {
@@ -270,6 +286,7 @@ export function useSprinklers() {
     currentZone,
     nextZone,
     nextScheduledRun,
+    initialize,
     addZone,
     updateZone,
     deleteZone,

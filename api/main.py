@@ -1,184 +1,184 @@
-from fastapi import FastAPI, Depends, Response, status
-from fastapi.encoders import jsonable_encoder
-from api.sprinklerfunctions import *
-from sprinkerModels import Valve, ZoneName
-from factory_reset import factory_reset
-import settings
+import sys
+import os
 
-from pprint import pprint
+sys.path.insert(0, os.path.dirname(__file__))
 
-app = FastAPI()
+from contextlib import asynccontextmanager
 
-#figure out the pi version
-settings.pi_version = sqlite_to_dict("select * from settings where key=\"pi_version\"")[0]['value']
+from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.middleware.cors import CORSMiddleware
+
+from database import (
+    get_db, init_db,
+    row_to_zone, row_to_schedule,
+    get_zone, get_schedule,
+    create_zone, update_zone, delete_zone,
+    create_schedule, update_schedule, delete_schedule,
+)
+from models import Zone, ZoneCreate, ZoneUpdate, Schedule, ScheduleCreate, ScheduleUpdate
+
+# ---------------------------------------------------------------------------
+# Hardware — graceful fallback when smbus2 is unavailable (dev / Mac)
+# ---------------------------------------------------------------------------
+try:
+    from sprinklerfunctions import (
+        turn_on_valve,
+        turn_off_valve,
+        turn_off_all_valves,
+        get_all_valve_status,
+    )
+    HW_AVAILABLE = True
+except Exception:
+    HW_AVAILABLE = False
+
+    def turn_on_valve(v: int) -> None: pass
+    def turn_off_valve(v: int) -> None: pass
+    def turn_off_all_valves() -> bool: return True
+    def get_all_valve_status() -> list[dict]: return [{"valve": i, "status": "OFF"} for i in range(16)]
 
 
+# ---------------------------------------------------------------------------
+# App
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Sprinkler API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"http://localhost(:\d+)?",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
 @app.get("/healthz")
-async def health():
-    health = {
-        "health": "I'm Alive", 
-        "Dev Mode": settings.devmode,
-        "Sprinker Dev IP" : settings.devip,
-        "Raspberry Pi Version" :settings.pi_version,
-        "Current BCM ": settings.current_bcm,
-        }
-    return health
-
-#perform a factory reset on the device - basically reloads the base sql data
-@app.post("/factoryreset", status_code=200)
-def reset_to_factory_defaults(validate_intent:str, response: Response):
-    result = factory_reset(validate_intent)
-    if result == 200:
-        return{"data: Factory Reset Complete"}
-    else:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return{"data":"Aborting Factory Reset - MUST SAY 'I want to reset'"}
+def health():
+    return {"status": "ok", "hw_available": HW_AVAILABLE}
 
 
-
-##########
-### Pins
-##########
-#given a pi version get all pin information
-@app.get("/pi/pin/{pi_version}")
-def get_all_pi_pin_info(pi_version:int):
-    result = sqlite_to_dict("select id,pin,bcm,pi_version from pins where pi_version={0}".format(pi_version))    
-    return{"data":result }
-
-#given a pi version and pin return the pin information
-@app.get("/pi/pin/{pi_version}/{pin}")
-def get_pi_pin_info( pi_version:int, pin:int):
-    result = sqlite_to_dict("select * from pins where pi_version={0} and pin={1}".format(pi_version,pin))
-    return{"data" : result }
+# ---------------------------------------------------------------------------
+# Zones — CRUD
+# ---------------------------------------------------------------------------
+@app.get("/zones", response_model=list[Zone])
+def list_zones():
+    with get_db() as con:
+        rows = con.execute("SELECT * FROM zones ORDER BY port").fetchall()
+        return [row_to_zone(r) for r in rows]
 
 
-
-#given a pi version return pins not in use by valves
-@app.get("/pi/pinsavailable/{pi_version}")
-def get_available_pins( pi_version:int):
-    result = sqlite_to_dict("select pin from pins where pi_version={0} and pin not in (select pin from valves);".format(pi_version))
-    return{"data" : result }
-
-
-
-######### 
-# Valves
-#########
-#get all the valves
-@app.get("/valves")
-def get_all_valves():
-    result = sqlite_to_dict("select * from valves")
-    return{"data":result}
-#update valve
-@app.put("/valves/{valve_id}")
-def update_valve(valve: Valve, valve_id: int):
-    update_valve_encoded = jsonable_encoder(valve)
-    name = update_valve_encoded["name"]
-    description = update_valve_encoded["description"]
-    result = sqlite_put_post("update valves set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,valve_id))
-    return {"data":result}
-#add a valve
-@app.post("/valves")
-def add_valve(valve: Valve, pin: int):
-    add_valve_encoded = jsonable_encoder(valve)
-    name = add_valve_encoded["name"]
-    description = add_valve_encoded["description"]
-    result = sqlite_put_post("insert into valves(name,description,pin) values(\"{0}\",\"{1}\",{2})".format(name,description,pin))
-    return{"data":result}
-
-#operate a valve
-@app.post("/valves/operate", status_code=200)
-def operate_valve(valve:int, set_status:str, response:Response):
-    
-    #check for valid input
-    if set_status == "on":
-        #result = turn_on_valve(valve)
-        result = turn_on_valve_2(valve)
-    elif set_status == "off":
-        result = turn_off_all_valves()
-    else:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return{"data":"Aborting - valid status for set is on or off"}
-    
-    if result == None:
-        return{"data":"Valve {0} set to {1}. result: {2}".format(valve,set_status,result)}
-    else:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return{"data":"1 Aborting - Something went wrong. result: {0}".format(result)}
-    
-@app.get("/valves/checkstatus", status_code=200)
-def check_valve_status(valve:int, response:Response):
-    #result = read_valve_bus(valve)
-    result = None
-    return{"data": result }
-    # bcm = sqlite_to_dict("select p.bcm from pins p left join valves v on p.pin = v.pin where v.id = {0} and p.pi_version = {1}".format(valve,settings.pi_version))[0]['bcm']
-    # result = get_valve_status(bcm)
-    # return{"data":[{"Valve":valve,"Status": result }]}
-    # # else:
-    # #     response.status_code = status.HTTP_400_BAD_REQUEST
-    # #     return{"data":"Aborting - The Valve you are trying to check is not the current valve."}
+@app.post("/zones", response_model=Zone, status_code=status.HTTP_201_CREATED)
+def add_zone(body: ZoneCreate):
+    with get_db() as con:
+        if con.execute("SELECT id FROM zones WHERE port = ?", (body.port,)).fetchone():
+            raise HTTPException(status_code=409, detail=f"Port {body.port} is already assigned to another zone")
+        return create_zone(con, body.name, body.port, body.duration, body.icon, body.color)
 
 
+@app.put("/zones/{zone_id}", response_model=Zone)
+def replace_zone(zone_id: str, body: ZoneUpdate):
+    with get_db() as con:
+        if not get_zone(con, zone_id):
+            raise HTTPException(status_code=404, detail="Zone not found")
+        result = update_zone(con, zone_id, **body.model_dump(exclude_none=True))
+        return result
 
-@app.get("/valves/allstatus", status_code=200)
-def get_status_of_all_valve_bcm():
-    result = get_all_valve_bcm_status()
-    return{"data": result}
 
-########
-# Zones
-########
+@app.delete("/zones/{zone_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_zone(zone_id: str):
+    with get_db() as con:
+        if not delete_zone(con, zone_id):
+            raise HTTPException(status_code=404, detail="Zone not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-#get all the zone names
-@app.get("/zone/names")
-def get_all_zones():
-    result = sqlite_to_dict("select * from zone_names")
-    return{"data":result}
-#add a zone name
-@app.post("/zones/name/")
-def add_zone_name(zone: ZoneName):
-    add_zone_name_encoded = jsonable_encoder(zone)
-    name = add_zone_name_encoded["name"]
-    description = add_zone_name_encoded["description"]
-    result = sqlite_put_post("insert into zone_names(\"name\",\"description\") values (\"{0}\", \"{1}\")".format(name, description))
-    return{"data":result}
 
-#update zone name by id
-@app.put("/zones/names/{zone_id}")
-def update_zone_name(zone_id: int, zone: ZoneName):
-    update_zone_name_encoded = jsonable_encoder(zone)
-    name = update_zone_name_encoded["name"]
-    description = update_zone_name_encoded["description"]
-    result = sqlite_put_post("update zone_names set name=\"{0}\", description=\"{1}\" where id={2}".format(name,description,zone_id))
-    return{"data":result}
+# ---------------------------------------------------------------------------
+# Zones — hardware control
+# ---------------------------------------------------------------------------
+@app.post("/zones/{zone_id}/run")
+def run_zone(zone_id: str):
+    with get_db() as con:
+        zone = get_zone(con, zone_id)
+    if not zone:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    valve = zone["port"] - 1
+    turn_on_valve(valve)
+    return {"status": "running", "zone_id": zone_id, "valve": valve}
 
-#remove a zone name
-@app.delete("/zones/names", status_code=200)
-def delete_zone_name(zone_id: int, response: Response):
-    #check to see if there are any valves associated with the zone
-    valves = sqlite_to_dict("select * from zones where zone_id={0}".format(zone_id))
-    if valves == []:
-        result = sqlite_put_post("delete from zone_names where id={0}".format(zone_id))
-        return{"data": result}
-    else:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        result = "Cannot delete zone name if valves are attached to zone."
-        return{"data":result}
 
-#get valves for a given zone
-@app.get("/zones/valves")
-def get_valves_for_a_zone(zone_id: int):
-    result = sqlite_to_dict("select * from zones where zone_id = {0}".format(zone_id))
-    return{"data":result}
+@app.post("/zones/{zone_id}/stop")
+def stop_zone(zone_id: str):
+    with get_db() as con:
+        zone = get_zone(con, zone_id)
+    if not zone:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    valve = zone["port"] - 1
+    turn_off_valve(valve)
+    return {"status": "idle", "zone_id": zone_id, "valve": valve}
 
-#add valves to a zone
-@app.post("/zones/valves")
-def add_valve_to_zone(zone_id: int, valve_id:int):
-    result = sqlite_put_post("insert into zones(zone_id, valve) values({0},{1})".format(zone_id,valve_id))
-    return{"data":result}
 
-#remove a valve from a zone
-@app.delete("/zones/valves")
-def remove_valve_from_zone(zone_id:int, valve_id:int):
-    result = sqlite_put_post("delete from zones where zone_id={0} and valve={1}".format(zone_id,valve_id))
-    return{"data":result}
+# ---------------------------------------------------------------------------
+# Valves — global control
+# ---------------------------------------------------------------------------
+@app.post("/valves/stop-all")
+def stop_all_valves():
+    turn_off_all_valves()
+    return {"status": "all_off"}
+
+
+@app.get("/valves/status")
+def valve_status():
+    return get_all_valve_status()
+
+
+# ---------------------------------------------------------------------------
+# Schedules — CRUD
+# ---------------------------------------------------------------------------
+@app.get("/schedules", response_model=list[Schedule])
+def list_schedules():
+    with get_db() as con:
+        rows = con.execute("SELECT * FROM schedules").fetchall()
+        return [row_to_schedule(r) for r in rows]
+
+
+@app.post("/schedules", response_model=Schedule, status_code=status.HTTP_201_CREATED)
+def add_schedule(body: ScheduleCreate):
+    with get_db() as con:
+        return create_schedule(
+            con,
+            body.name,
+            body.days,
+            body.startTimes,
+            body.zoneIds,
+            body.enabled,
+        )
+
+
+@app.put("/schedules/{sched_id}", response_model=Schedule)
+def replace_schedule(sched_id: str, body: ScheduleUpdate):
+    with get_db() as con:
+        if not get_schedule(con, sched_id):
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        data = body.model_dump(exclude_none=True)
+        # Map frontend camelCase keys to DB snake_case keys
+        if "startTimes" in data:
+            data["start_times"] = data.pop("startTimes")
+        if "zoneIds" in data:
+            data["zone_ids"] = data.pop("zoneIds")
+        result = update_schedule(con, sched_id, **data)
+        return result
+
+
+@app.delete("/schedules/{sched_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_schedule(sched_id: str):
+    with get_db() as con:
+        if not delete_schedule(con, sched_id):
+            raise HTTPException(status_code=404, detail="Schedule not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

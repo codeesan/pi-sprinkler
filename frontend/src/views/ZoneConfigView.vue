@@ -123,6 +123,7 @@
                   :rules="[
                     v => !!v || 'Required',
                     v => (v >= 1 && v <= 16) || 'Port must be 1–16',
+                    v => !state.zones.some(z => z.port === v && z.id !== editingZone?.id) || 'Port already in use',
                   ]"
                 />
               </v-col>
@@ -262,15 +263,17 @@ async function submitForm() {
   if (!valid) return
 
   if (editingZone.value) {
-    updateZone(editingZone.value.id, {
+    await updateZone(editingZone.value.id, {
       name: form.name,
       port: form.port,
       duration: form.duration,
       icon: form.icon,
     })
+    if (state.error) { showSnack(state.error, 'error'); state.error = null; return }
     showSnack(`${form.name} updated`, 'primary')
   } else {
-    addZone({ name: form.name, port: form.port, duration: form.duration, icon: form.icon })
+    await addZone({ name: form.name, port: form.port, duration: form.duration, icon: form.icon })
+    if (state.error) { showSnack(state.error, 'error'); state.error = null; return }
     showSnack(`${form.name} added`, 'success')
   }
   formDialogOpen.value = false
@@ -285,10 +288,10 @@ function confirmDelete(zone) {
   deleteDialogOpen.value = true
 }
 
-function doDelete() {
+async function doDelete() {
   if (deletingZone.value) {
     const name = deletingZone.value.name
-    deleteZone(deletingZone.value.id)
+    await deleteZone(deletingZone.value.id)
     showSnack(`${name} deleted`, 'error')
   }
   deleteDialogOpen.value = false
