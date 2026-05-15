@@ -20,11 +20,28 @@ from database import (
     create_schedule, update_schedule, delete_schedule,
     get_active_run, start_run, end_run, clear_all_runs,
     get_active_schedule,
+    get_settings, upsert_settings,
 )
 from models import (
     Zone, ZoneCreate, ZoneUpdate,
     Schedule, ScheduleCreate, ScheduleUpdate,
     SystemStatus, RunningZone, ActiveSchedule,
+    HistoryEvent,
+    AppSettings, AppSettingsUpdate,
+)
+
+# ---------------------------------------------------------------------------
+# Event logging
+# ---------------------------------------------------------------------------
+from event_log import (
+    event_cache,
+    log_system_start,
+    log_manual_zone_start,
+    log_manual_zone_stop,
+    log_stop_all,
+    log_schedule_start,
+    log_schedule_zone_start,
+    log_schedule_complete,
 )
 
 # ---------------------------------------------------------------------------
@@ -94,6 +111,8 @@ async def _execute_schedule(schedule_id: str) -> None:
     if not schedule:
         return
 
+    log_schedule_start(schedule["name"], len(schedule["zoneIds"]))
+
     async def run_one(zone_id: str) -> None:
         with get_db() as con:
             zone = get_zone(con, zone_id)
@@ -115,7 +134,8 @@ async def _execute_schedule(schedule_id: str) -> None:
         with get_db() as con:
             clear_all_runs(con)
 
-        # Run this zone
+        # Delegate to relay controller hardware and log the zone start
+        log_schedule_zone_start(schedule["name"], zone["name"], zone["duration"])
         turn_on_valve(valve)
         with get_db() as con:
             start_run(con, zone_id, zone["name"], duration_sec, schedule_id)
@@ -134,6 +154,7 @@ async def _execute_schedule(schedule_id: str) -> None:
     _schedule_tasks[schedule_id] = task
     try:
         await task
+        log_schedule_complete(schedule["name"])
     finally:
         _schedule_tasks.pop(schedule_id, None)
 
@@ -182,6 +203,8 @@ async def lifespan(app: FastAPI):
     _reload_scheduler()
     scheduler.start()
 
+    log_system_start()
+
     yield
 
     scheduler.shutdown()
@@ -203,6 +226,43 @@ app.add_middleware(
 @app.get("/healthz")
 def health():
     return {"status": "ok", "hw_available": HW_AVAILABLE}
+
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+@app.get("/settings", response_model=AppSettings)
+def read_settings():
+    with get_db() as con:
+        data = get_settings(con)
+    return AppSettings(
+        name=data["name"],
+        location=data["location"],
+    )
+
+
+@app.put("/settings", response_model=AppSettings)
+def write_settings(body: AppSettingsUpdate):
+    with get_db() as con:
+        data = upsert_settings(
+            con,
+            name=body.name,
+            location=body.location.model_dump() if body.location is not None else None,
+        )
+    return AppSettings(
+        name=data["name"],
+        location=data["location"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Event history
+# ---------------------------------------------------------------------------
+@app.get("/history", response_model=list[HistoryEvent])
+def get_history(limit: int = Query(default=100, ge=1, le=500)):
+    """Return the most-recent `limit` events from the in-memory event cache."""
+    events = list(event_cache)  # deque is already ordered most-recent first
+    return events[:limit]
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +365,9 @@ async def run_zone(
     with get_db() as con:
         start_run(con, zone_id, zone["name"], duration_sec)
 
+    duration_min = duration_sec // 60
+    log_manual_zone_start(zone["name"], duration_min)
+
     # Schedule the auto-shutoff background task
     task = asyncio.create_task(_zone_shutoff_task(zone_id, valve, duration_sec))
     _zone_tasks[zone_id] = task
@@ -336,6 +399,8 @@ async def stop_zone(zone_id: str):
     with get_db() as con:
         end_run(con, zone_id)
 
+    log_manual_zone_stop(zone["name"])
+
     return {"status": "idle"}
 
 
@@ -358,6 +423,8 @@ async def stop_all_valves():
 
     with get_db() as con:
         clear_all_runs(con)
+
+    log_stop_all()
 
     return {"status": "all_off"}
 

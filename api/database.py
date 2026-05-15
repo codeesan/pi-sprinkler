@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS active_runs (
     duration_sec INTEGER NOT NULL,
     schedule_id  TEXT
 );
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    id       INTEGER PRIMARY KEY CHECK (id = 1),
+    name     TEXT NOT NULL DEFAULT '',
+    loc_city TEXT NOT NULL DEFAULT '',
+    loc_lat  REAL,
+    loc_lon  REAL
+);
 """
 
 _SEED_ZONES = [
@@ -220,6 +228,35 @@ def end_run(con, zone_id: str) -> None:
 def clear_all_runs(con) -> None:
     """DELETE all rows from active_runs."""
     con.execute("DELETE FROM active_runs")
+
+
+def get_settings(con) -> dict:
+    row = con.execute("SELECT * FROM app_settings WHERE id = 1").fetchone()
+    if not row:
+        return {"name": "", "location": {"city": "", "lat": None, "lon": None}}
+    return {
+        "name": row["name"],
+        "location": {"city": row["loc_city"], "lat": row["loc_lat"], "lon": row["loc_lon"]},
+    }
+
+
+def upsert_settings(con, name: str | None = None, location: dict | None = None) -> dict:
+    current = get_settings(con)
+    new_name = name if name is not None else current["name"]
+    new_loc = {**current["location"], **(location or {})}
+    con.execute(
+        """
+        INSERT INTO app_settings (id, name, loc_city, loc_lat, loc_lon)
+        VALUES (1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name     = excluded.name,
+            loc_city = excluded.loc_city,
+            loc_lat  = excluded.loc_lat,
+            loc_lon  = excluded.loc_lon
+        """,
+        (new_name, new_loc.get("city", ""), new_loc.get("lat"), new_loc.get("lon")),
+    )
+    return get_settings(con)
 
 
 def get_active_schedule(con) -> dict | None:

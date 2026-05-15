@@ -102,20 +102,26 @@
 import { ref, computed } from 'vue'
 import { useDisplay } from 'vuetify'
 import DailyView from './views/DailyView.vue'
+import HistoryView from './views/HistoryView.vue'
 import ConfigView from './views/ConfigView.vue'
 
 const display = useDisplay()
 
 const navItems = [
-  { view: 'daily',  label: 'Daily Use',     icon: 'mdi-water'       },
-  { view: 'config', label: 'Configuration', icon: 'mdi-cog-outline' },
+  { view: 'daily',   label: 'Daily Use',     icon: 'mdi-water'       },
+  { view: 'history', label: 'History',        icon: 'mdi-history'     },
+  { view: 'config',  label: 'Configuration',  icon: 'mdi-cog-outline' },
 ]
+
+const VIEW_MAP = {
+  daily:   DailyView,
+  history: HistoryView,
+  config:  ConfigView,
+}
 
 const activeView = ref('daily')
 
-const currentView = computed(() =>
-  activeView.value === 'daily' ? DailyView : ConfigView
-)
+const currentView = computed(() => VIEW_MAP[activeView.value] ?? DailyView)
 
 const currentNavItem = computed(() =>
   navItems.find((n) => n.view === activeView.value) ?? navItems[0]

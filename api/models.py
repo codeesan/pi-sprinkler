@@ -72,3 +72,27 @@ class SystemStatus(BaseModel):
     any_running: bool
     running_zone: Optional[RunningZone]
     active_schedule: Optional[ActiveSchedule]
+
+
+class HistoryEvent(BaseModel):
+    id: str
+    timestamp: str
+    type: str
+    message: str
+    details: dict
+
+
+class LocationData(BaseModel):
+    city: str = ''
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
+
+class AppSettings(BaseModel):
+    name: str = ''
+    location: LocationData = LocationData()
+
+
+class AppSettingsUpdate(BaseModel):
+    name: Optional[str] = None
+    location: Optional[LocationData] = None
