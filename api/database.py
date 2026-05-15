@@ -28,6 +28,14 @@ CREATE TABLE IF NOT EXISTS counters (
     key   TEXT PRIMARY KEY,
     value INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS active_runs (
+    zone_id      TEXT PRIMARY KEY,
+    zone_name    TEXT NOT NULL,
+    started_at   TEXT NOT NULL,
+    duration_sec INTEGER NOT NULL,
+    schedule_id  TEXT
+);
 """
 
 _SEED_ZONES = [
@@ -164,3 +172,80 @@ def update_schedule(con, sched_id: str, **fields) -> dict | None:
 def delete_schedule(con, sched_id: str) -> bool:
     cur = con.execute("DELETE FROM schedules WHERE id = ?", (sched_id,))
     return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------------
+# Active-run helpers
+# ---------------------------------------------------------------------------
+
+def get_active_run(con) -> dict | None:
+    """Return the single running zone record as a dict, or None."""
+    row = con.execute("SELECT * FROM active_runs LIMIT 1").fetchone()
+    if not row:
+        return None
+    return {
+        "zone_id":      row["zone_id"],
+        "zone_name":    row["zone_name"],
+        "started_at":   row["started_at"],
+        "duration_sec": row["duration_sec"],
+        "schedule_id":  row["schedule_id"],
+    }
+
+
+def start_run(
+    con,
+    zone_id: str,
+    zone_name: str,
+    duration_sec: int,
+    schedule_id: str | None = None,
+) -> None:
+    """INSERT OR REPLACE into active_runs."""
+    from datetime import datetime, timezone
+    started_at = datetime.now(timezone.utc).isoformat()
+    con.execute(
+        """
+        INSERT OR REPLACE INTO active_runs
+            (zone_id, zone_name, started_at, duration_sec, schedule_id)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (zone_id, zone_name, started_at, duration_sec, schedule_id),
+    )
+
+
+def end_run(con, zone_id: str) -> None:
+    """DELETE the active_runs row for zone_id."""
+    con.execute("DELETE FROM active_runs WHERE zone_id = ?", (zone_id,))
+
+
+def clear_all_runs(con) -> None:
+    """DELETE all rows from active_runs."""
+    con.execute("DELETE FROM active_runs")
+
+
+def get_active_schedule(con) -> dict | None:
+    """
+    Return schedule info for the currently running zone's schedule, or None.
+
+    Joins active_runs → schedules.  Returns a dict with keys:
+        schedule_id, schedule_name, zone_index, total_zones
+    """
+    row = con.execute("SELECT * FROM active_runs LIMIT 1").fetchone()
+    if not row or not row["schedule_id"]:
+        return None
+    sched_row = con.execute(
+        "SELECT * FROM schedules WHERE id = ?", (row["schedule_id"],)
+    ).fetchone()
+    if not sched_row:
+        return None
+    import json
+    zone_ids = json.loads(sched_row["zone_ids"])
+    try:
+        zone_index = zone_ids.index(row["zone_id"])
+    except ValueError:
+        zone_index = 0
+    return {
+        "schedule_id":   sched_row["id"],
+        "schedule_name": sched_row["name"],
+        "zone_index":    zone_index,
+        "total_zones":   len(zone_ids),
+    }

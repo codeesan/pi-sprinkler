@@ -54,8 +54,64 @@ async function initialize() {
   }
 }
 
-// Load on first import
+// --- Status polling ---
+let _pollTimer = null
+
+function startStatusPolling() {
+  if (_pollTimer) return // already polling
+  _pollTimer = setInterval(async () => {
+    try {
+      const status = await apiFetch('/system/status')
+      _applyStatus(status)
+    } catch {
+      // backend unreachable — leave state as-is
+    }
+  }, 5000)
+}
+
+function stopStatusPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null }
+}
+
+function _applyStatus(status) {
+  if (!status.any_running) {
+    // Nothing running — set all zones to idle
+    state.zones.forEach(z => {
+      z.status = STATUS.IDLE
+      z.timeRemaining = 0
+    })
+    state.activeScheduleId = null
+    state.activeScheduleZoneIndex = 0
+    return
+  }
+
+  const { running_zone, active_schedule } = status
+
+  // Mark each zone correctly
+  state.zones.forEach(z => {
+    if (z.id === running_zone.zone_id) {
+      z.status = STATUS.RUNNING
+      z.timeRemaining = Math.ceil(running_zone.time_remaining_sec / 60)
+    } else if (z.status === STATUS.RUNNING) {
+      // This zone was running locally but backend says it's not — correct it
+      z.status = STATUS.IDLE
+      z.timeRemaining = 0
+    }
+  })
+
+  // Sync active schedule state
+  if (active_schedule) {
+    state.activeScheduleId = active_schedule.schedule_id
+    state.activeScheduleZoneIndex = active_schedule.zone_index
+  } else {
+    state.activeScheduleId = null
+    state.activeScheduleZoneIndex = 0
+  }
+}
+
+// Load on first import, then begin polling
 initialize()
+startStatusPolling()
 
 export function useSprinklers() {
   // --- Computed ---
@@ -300,6 +356,8 @@ export function useSprinklers() {
     addSchedule,
     updateSchedule,
     deleteSchedule,
+    startStatusPolling,
+    stopStatusPolling,
     STATUS,
   }
 }

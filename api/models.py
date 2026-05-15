@@ -50,3 +50,25 @@ class Schedule(BaseModel):
     startTimes: list[str]
     zoneIds: list[str]
     enabled: bool
+
+
+class RunningZone(BaseModel):
+    zone_id: str
+    zone_name: str
+    duration_sec: int
+    elapsed_sec: int
+    time_remaining_sec: int
+    schedule_id: Optional[str]
+
+
+class ActiveSchedule(BaseModel):
+    schedule_id: str
+    schedule_name: str
+    zone_index: int
+    total_zones: int
+
+
+class SystemStatus(BaseModel):
+    any_running: bool
+    running_zone: Optional[RunningZone]
+    active_schedule: Optional[ActiveSchedule]
