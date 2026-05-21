@@ -90,6 +90,46 @@
       </v-list>
     </v-card>
 
+    <!-- Rain delay card -->
+    <v-card rounded="xl" elevation="0" class="mb-4 pa-4" color="surface">
+      <div class="text-subtitle-1 font-weight-semibold text-primary mb-3 d-flex align-center gap-2">
+        <v-icon icon="mdi-weather-rainy" color="primary" size="20" />
+        Rain Delay
+      </div>
+
+      <v-switch
+        v-model="rainDelayEnabled"
+        color="primary"
+        density="compact"
+        hide-details
+        label="Skip scheduled watering when rain is likely"
+        @update:model-value="saveRainDelay"
+      />
+
+      <v-expand-transition>
+        <div v-if="rainDelayEnabled" class="mt-4">
+          <div class="d-flex justify-space-between align-center mb-1">
+            <span class="text-body-2 text-medium-emphasis">Skip threshold</span>
+            <span class="text-body-2 font-weight-medium text-primary">{{ rainDelayThreshold }}%</span>
+          </div>
+          <v-slider
+            v-model="rainDelayThreshold"
+            :min="10"
+            :max="90"
+            :step="10"
+            color="primary"
+            track-color="secondary"
+            thumb-label
+            hide-details
+            @end="saveRainDelay"
+          />
+          <div class="text-caption text-medium-emphasis mt-1">
+            Schedules will be skipped when the chance of rain meets or exceeds this threshold.
+          </div>
+        </div>
+      </v-expand-transition>
+    </v-card>
+
     <v-snackbar
       v-model="saved"
       color="primary"
@@ -98,7 +138,7 @@
       :timeout="2500"
     >
       <v-icon icon="mdi-check" class="mr-2" />
-      Location saved
+      Settings saved
     </v-snackbar>
   </div>
 </template>
@@ -114,6 +154,17 @@ const displayName = ref(settings.name)
 
 function saveName() {
   saveSettings({ name: displayName.value.trim() })
+}
+
+// Rain delay
+const rainDelayEnabled = ref(settings.rain_delay_enabled ?? false)
+const rainDelayThreshold = ref(settings.rain_delay_threshold ?? 50)
+
+function saveRainDelay() {
+  saveSettings({
+    rain_delay_enabled: rainDelayEnabled.value,
+    rain_delay_threshold: rainDelayThreshold.value,
+  })
 }
 
 const cityQuery = ref('')

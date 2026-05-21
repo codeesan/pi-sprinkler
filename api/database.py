@@ -38,11 +38,13 @@ CREATE TABLE IF NOT EXISTS active_runs (
 );
 
 CREATE TABLE IF NOT EXISTS app_settings (
-    id       INTEGER PRIMARY KEY CHECK (id = 1),
-    name     TEXT NOT NULL DEFAULT '',
-    loc_city TEXT NOT NULL DEFAULT '',
-    loc_lat  REAL,
-    loc_lon  REAL
+    id                   INTEGER PRIMARY KEY CHECK (id = 1),
+    name                 TEXT NOT NULL DEFAULT '',
+    loc_city             TEXT NOT NULL DEFAULT '',
+    loc_lat              REAL,
+    loc_lon              REAL,
+    rain_delay_enabled   INTEGER NOT NULL DEFAULT 0,
+    rain_delay_threshold INTEGER NOT NULL DEFAULT 50
 );
 """
 
@@ -233,28 +235,45 @@ def clear_all_runs(con) -> None:
 def get_settings(con) -> dict:
     row = con.execute("SELECT * FROM app_settings WHERE id = 1").fetchone()
     if not row:
-        return {"name": "", "location": {"city": "", "lat": None, "lon": None}}
+        return {
+            "name": "",
+            "location": {"city": "", "lat": None, "lon": None},
+            "rain_delay_enabled": False,
+            "rain_delay_threshold": 50,
+        }
     return {
         "name": row["name"],
         "location": {"city": row["loc_city"], "lat": row["loc_lat"], "lon": row["loc_lon"]},
+        "rain_delay_enabled": bool(row["rain_delay_enabled"]),
+        "rain_delay_threshold": row["rain_delay_threshold"],
     }
 
 
-def upsert_settings(con, name: str | None = None, location: dict | None = None) -> dict:
+def upsert_settings(
+    con,
+    name: str | None = None,
+    location: dict | None = None,
+    rain_delay_enabled: bool | None = None,
+    rain_delay_threshold: int | None = None,
+) -> dict:
     current = get_settings(con)
     new_name = name if name is not None else current["name"]
     new_loc = {**current["location"], **(location or {})}
+    new_rde = rain_delay_enabled if rain_delay_enabled is not None else current["rain_delay_enabled"]
+    new_rdt = rain_delay_threshold if rain_delay_threshold is not None else current["rain_delay_threshold"]
     con.execute(
         """
-        INSERT INTO app_settings (id, name, loc_city, loc_lat, loc_lon)
-        VALUES (1, ?, ?, ?, ?)
+        INSERT INTO app_settings (id, name, loc_city, loc_lat, loc_lon, rain_delay_enabled, rain_delay_threshold)
+        VALUES (1, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
-            name     = excluded.name,
-            loc_city = excluded.loc_city,
-            loc_lat  = excluded.loc_lat,
-            loc_lon  = excluded.loc_lon
+            name                 = excluded.name,
+            loc_city             = excluded.loc_city,
+            loc_lat              = excluded.loc_lat,
+            loc_lon              = excluded.loc_lon,
+            rain_delay_enabled   = excluded.rain_delay_enabled,
+            rain_delay_threshold = excluded.rain_delay_threshold
         """,
-        (new_name, new_loc.get("city", ""), new_loc.get("lat"), new_loc.get("lon")),
+        (new_name, new_loc.get("city", ""), new_loc.get("lat"), new_loc.get("lon"), int(new_rde), new_rdt),
     )
     return get_settings(con)
 

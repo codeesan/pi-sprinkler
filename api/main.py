@@ -43,6 +43,7 @@ from event_log import (
     log_schedule_start,
     log_schedule_zone_start,
     log_schedule_complete,
+    log_schedule_skipped_rain,
 )
 
 # ---------------------------------------------------------------------------
@@ -107,13 +108,21 @@ async def _run_schedule_sequence(zone_ids: list[str], run_one_fn) -> None:
 
 async def _execute_schedule(schedule_id: str) -> None:
     """APScheduler callback: runs all zones in a schedule sequentially."""
-    # TODO: prompt user about postponing watering once notifications have been added.
-    # Check _weather_cache.rain_likely here and send a notification asking whether
-    # to skip this run before proceeding.
     with get_db() as con:
         schedule = get_schedule(con, schedule_id)
+        s = get_settings(con)
     if not schedule:
         return
+
+    # Rain delay check
+    if s["rain_delay_enabled"] and _weather_cache is not None:
+        prob = _weather_cache.precip_probability
+        threshold = s["rain_delay_threshold"]
+        if _weather_cache.rain_likely or prob >= threshold:
+            log_schedule_skipped_rain(schedule["name"], prob)
+            # TODO: prompt user about postponing watering once notifications have been added.
+            # Send a notification asking whether to skip this run before silently returning.
+            return
 
     log_schedule_start(schedule["name"], len(schedule["zoneIds"]))
 
@@ -242,6 +251,8 @@ def read_settings():
     return AppSettings(
         name=data["name"],
         location=data["location"],
+        rain_delay_enabled=data["rain_delay_enabled"],
+        rain_delay_threshold=data["rain_delay_threshold"],
     )
 
 
@@ -252,10 +263,14 @@ def write_settings(body: AppSettingsUpdate):
             con,
             name=body.name,
             location=body.location.model_dump() if body.location is not None else None,
+            rain_delay_enabled=body.rain_delay_enabled,
+            rain_delay_threshold=body.rain_delay_threshold,
         )
     return AppSettings(
         name=data["name"],
         location=data["location"],
+        rain_delay_enabled=data["rain_delay_enabled"],
+        rain_delay_threshold=data["rain_delay_threshold"],
     )
 
 

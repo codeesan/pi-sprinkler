@@ -151,3 +151,11 @@ def log_schedule_complete(schedule_name: str) -> None:
         message=f"Schedule '{schedule_name}' completed",
         details={"schedule_name": schedule_name},
     )
+
+
+def log_schedule_skipped_rain(schedule_name: str, precip_probability: int) -> None:
+    _emit(
+        event_type="schedule_skipped_rain",
+        message=f"Schedule '{schedule_name}' skipped — {precip_probability}% chance of rain",
+        details={"schedule_name": schedule_name, "precip_probability": precip_probability},
+    )

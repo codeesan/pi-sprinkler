@@ -215,23 +215,25 @@ const groupedEvents = computed(() => {
 
 // --- Helpers ---
 const TYPE_ICON = {
-  system_start:         'mdi-power',
-  zone_start:           'mdi-water',
-  zone_stop:            'mdi-water-off',
-  stop_all:             'mdi-stop-circle',
-  schedule_start:       'mdi-calendar-clock',
-  schedule_zone_start:  'mdi-sprinkler',
-  schedule_complete:    'mdi-calendar-check',
+  system_start:          'mdi-power',
+  zone_start:            'mdi-water',
+  zone_stop:             'mdi-water-off',
+  stop_all:              'mdi-stop-circle',
+  schedule_start:        'mdi-calendar-clock',
+  schedule_zone_start:   'mdi-sprinkler',
+  schedule_complete:     'mdi-calendar-check',
+  schedule_skipped_rain: 'mdi-weather-rainy',
 }
 
 const TYPE_COLOR = {
-  system_start:         '#78909C', // blue-grey
-  zone_start:           '#29B6F6', // accent / water blue
-  zone_stop:            '#66BB6A', // secondary green
-  stop_all:             '#EF5350', // error red
-  schedule_start:       '#2E7D32', // primary green
-  schedule_zone_start:  '#29B6F6', // accent / water blue
-  schedule_complete:    '#A5D6A7', // success mint
+  system_start:          '#78909C', // blue-grey
+  zone_start:            '#29B6F6', // accent / water blue
+  zone_stop:             '#66BB6A', // secondary green
+  stop_all:              '#EF5350', // error red
+  schedule_start:        '#2E7D32', // primary green
+  schedule_zone_start:   '#29B6F6', // accent / water blue
+  schedule_complete:     '#A5D6A7', // success mint
+  schedule_skipped_rain: '#F9A825', // amber — skipped, not an error
 }
 
 function typeIcon(type) {

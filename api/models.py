@@ -91,11 +91,15 @@ class LocationData(BaseModel):
 class AppSettings(BaseModel):
     name: str = ''
     location: LocationData = LocationData()
+    rain_delay_enabled: bool = False
+    rain_delay_threshold: int = Field(default=50, ge=10, le=90)
 
 
 class AppSettingsUpdate(BaseModel):
     name: Optional[str] = None
     location: Optional[LocationData] = None
+    rain_delay_enabled: Optional[bool] = None
+    rain_delay_threshold: Optional[int] = Field(default=None, ge=10, le=90)
 
 
 class WeatherData(BaseModel):

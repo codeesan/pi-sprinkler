@@ -6,6 +6,8 @@ const STORAGE_KEY = 'sprinkler_settings'
 const defaultSettings = {
   name: '',
   location: { city: '', lat: null, lon: null },
+  rain_delay_enabled: false,
+  rain_delay_threshold: 50,
 }
 
 function loadFromStorage() {
@@ -29,6 +31,8 @@ async function loadSettings() {
     const data = await res.json()
     settings.name = data.name ?? ''
     Object.assign(settings.location, data.location ?? {})
+    settings.rain_delay_enabled = data.rain_delay_enabled ?? false
+    settings.rain_delay_threshold = data.rain_delay_threshold ?? 50
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
   } catch {
     // API unreachable — localStorage values remain
