@@ -24,7 +24,7 @@
         :key="schedule.id"
         rounded="xl"
         elevation="1"
-        class="schedule-card"
+        class="schedule-card mb-3"
       >
         <v-card-item>
           <template #prepend>
