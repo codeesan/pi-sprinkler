@@ -74,9 +74,23 @@ def get_db():
         con.close()
 
 
+def _migrate_app_settings(con) -> None:
+    # Add columns that exist in the schema but are absent from the live table.
+    # Needed when deploying to a Pi whose DB was initialised before a schema change.
+    existing = {row[1] for row in con.execute("PRAGMA table_info(app_settings)").fetchall()}
+    pending = [
+        ("rain_delay_enabled",   "INTEGER NOT NULL DEFAULT 0"),
+        ("rain_delay_threshold", "INTEGER NOT NULL DEFAULT 50"),
+    ]
+    for col, definition in pending:
+        if col not in existing:
+            con.execute(f"ALTER TABLE app_settings ADD COLUMN {col} {definition}")
+
+
 def init_db():
     with get_db() as con:
         con.executescript(_SCHEMA)
+        _migrate_app_settings(con)
         if not con.execute("SELECT 1 FROM zones LIMIT 1").fetchone():
             con.executemany(
                 "INSERT INTO zones (id, name, port, duration, icon, color) VALUES (?,?,?,?,?,?)",
