@@ -588,3 +588,15 @@ def remove_schedule(sched_id: str):
             raise HTTPException(status_code=404, detail="Schedule not found")
     _reload_scheduler()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.post("/schedules/{sched_id}/run", status_code=status.HTTP_202_ACCEPTED)
+async def run_schedule_now(sched_id: str):
+    with get_db() as con:
+        schedule = get_schedule(con, sched_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    if sched_id in _schedule_tasks:
+        raise HTTPException(status_code=409, detail="Schedule already running")
+    asyncio.create_task(_execute_schedule(sched_id))
+    return {"status": "started", "schedule_id": sched_id}

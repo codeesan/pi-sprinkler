@@ -254,18 +254,13 @@ export function useSprinklers() {
   async function runSchedule(scheduleId) {
     const schedule = state.schedules.find((s) => s.id === scheduleId)
     if (!schedule || !schedule.enabled) return
-    state.activeScheduleId = scheduleId
-    state.activeScheduleZoneIndex = 0
-    const firstZoneId = schedule.zoneIds[0]
-    if (firstZoneId) {
-      try {
-        await runZone(firstZoneId)
-      } catch (e) {
-        state.error = e.message || 'Failed to start schedule'
-        state.activeScheduleId = null
-        state.activeScheduleZoneIndex = 0
-        throw e
-      }
+    try {
+      await apiFetch(`/schedules/${scheduleId}/run`, { method: 'POST' })
+      state.activeScheduleId = scheduleId
+      state.activeScheduleZoneIndex = 0
+    } catch (e) {
+      state.error = e.message || 'Failed to start schedule'
+      throw e
     }
   }
 
