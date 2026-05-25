@@ -168,15 +168,11 @@ async def _execute_schedule(schedule_id: str) -> None:
             with get_db() as con:
                 end_run(con, zone_id)
 
-    task = asyncio.create_task(
-        _run_schedule_sequence(schedule["zoneIds"], run_one)
-    )
-    _schedule_tasks[schedule_id] = task
     try:
-        await task
+        await _run_schedule_sequence(schedule["zoneIds"], run_one)
         log_schedule_complete(schedule["name"])
-    finally:
-        _schedule_tasks.pop(schedule_id, None)
+    except asyncio.CancelledError:
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -606,8 +602,12 @@ async def run_schedule_now(sched_id: str):
     if sched_id in _schedule_tasks:
         raise HTTPException(status_code=409, detail="Schedule already running")
     task = asyncio.create_task(_execute_schedule(sched_id))
-    task.add_done_callback(
-        lambda t: logger.exception("Schedule %s task failed", sched_id, exc_info=t.exception())
-        if not t.cancelled() and t.exception() else None
-    )
+    _schedule_tasks[sched_id] = task
+
+    def _on_done(t: asyncio.Task) -> None:
+        _schedule_tasks.pop(sched_id, None)
+        if not t.cancelled() and t.exception():
+            logger.exception("Schedule %s failed", sched_id, exc_info=t.exception())
+
+    task.add_done_callback(_on_done)
     return {"status": "started", "schedule_id": sched_id}
