@@ -1,6 +1,9 @@
 import sys
 import os
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 
@@ -102,6 +105,10 @@ async def _run_schedule_sequence(zone_ids: list[str], run_one_fn) -> None:
             await run_one_fn(zone_id)
         except asyncio.CancelledError:
             # Propagate cancellation — caller will clean up hardware
+            turn_off_all_valves()
+            raise
+        except Exception:
+            logger.exception("Schedule sequence aborted — error running zone %s", zone_id)
             turn_off_all_valves()
             raise
 
@@ -598,5 +605,9 @@ async def run_schedule_now(sched_id: str):
         raise HTTPException(status_code=404, detail="Schedule not found")
     if sched_id in _schedule_tasks:
         raise HTTPException(status_code=409, detail="Schedule already running")
-    asyncio.create_task(_execute_schedule(sched_id))
+    task = asyncio.create_task(_execute_schedule(sched_id))
+    task.add_done_callback(
+        lambda t: logger.exception("Schedule %s task failed", sched_id, exc_info=t.exception())
+        if not t.cancelled() and t.exception() else None
+    )
     return {"status": "started", "schedule_id": sched_id}
