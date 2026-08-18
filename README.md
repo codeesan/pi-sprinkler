@@ -3,44 +3,54 @@
 # Development Getting Started
 
 ## base raspberryPi install
+The `deploy/` folder has a script that installs nginx, the systemd service, the Python venv, and builds the frontend in one shot — see [`deploy/README.md`](deploy/README.md) for the full walkthrough:
+```
+sudo bash deploy/install.sh
+```
+Prefer to do it by hand? Keep reading below for the manual steps.
+
 #### install nginx
 ```sudo apt-get install nginx```   
 ```sudo systemctl enable nginx```
 ## api
 #### setup
-I have a venv of sprinkers_venv: 
+I have a venv of sprinklers_venv (created at the project root, not inside `api/`):
 
 ``` python3 -m venv sprinklers_venv```  
 ``` source sprinklers_venv/bin/activate```
 ``` cd api ```  
 ``` pip3 install -r requirements.txt```
 
-### something about jenkins and i2c
-``` usermod -G i2c jenkins ```
+### i2c setup
+The relay board (PCF8575) talks over I2C. Enable it once and confirm it's visible:
+```
+sudo raspi-config nonint do_i2c 0
+sudo i2cdetect -y 1
+# should show 0x27 in the grid
+```
 
 #### development of api
 ```uvicorn main:app --reload```  
 http://localhost:8000   
 http://localhost:8000/docs 
 
-#### development with remote Raspberry Pi
-So you'll need to setup your Raspberry Pi to allow for remote gpio check this out: 
-https://gpiozero.readthedocs.io/en/stable/remote_gpio.html 
-For development mode on your local computer just set an environment variable 
-``` 
-export SPRINKLER_DEV=true 
-export SPRINKLER_IP=192.16.1.10
-```
-settings.py will load these values at boot. default is set to False for devmode.
+#### development off the Pi (e.g. on a Mac)
+`smbus2` and the I2C bus only exist on the Pi. `main.py` detects when `smbus2` can't be imported and falls back to no-op hardware functions, so you can run the API anywhere for frontend/API work — the valve endpoints will just respond without actually switching anything.
 
-```python
-    devmode = os.environ.get("SPRINKLER_DEV",False)
-    devip = os.environ.get("SPRINKLER_IP")
+## frontend
 ```
-
+cd frontend
+npm install
+npm run dev
+```
+That starts the Vite dev server. `npm run build` produces the `dist/` folder that nginx serves in production — `deploy/install.sh` and `deploy/restart.sh` do this for you automatically.
 
 #### factory reset 
-There is a script under the api called factory_reset.py. This is referenced at /factoryreset and requires that you validate intent by stating "I want to reset". This will drop all tables and load with basic data including pin/bcm, and a couple valves and zones. 
+There is a script under the api called factory_reset.py. It's a standalone script (not an API endpoint) — run it from the `api` directory with the venv active:
+```
+python3 factory_reset.py
+```
+This will drop all tables and load with basic data including pin/bcm, and a couple valves and zones. 
 
 ---
 # What was I thinking when I built it?
