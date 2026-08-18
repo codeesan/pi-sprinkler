@@ -45,13 +45,6 @@ npm run dev
 ```
 That starts the Vite dev server. `npm run build` produces the `dist/` folder that nginx serves in production — `deploy/install.sh` and `deploy/restart.sh` do this for you automatically.
 
-#### factory reset 
-There is a script under the api called factory_reset.py. It's a standalone script (not an API endpoint) — run it from the `api` directory with the venv active:
-```
-python3 factory_reset.py
-```
-This will drop all tables and load with basic data including pin/bcm, and a couple valves and zones. 
-
 ---
 # What was I thinking when I built it?
 

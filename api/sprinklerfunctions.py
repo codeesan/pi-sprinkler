@@ -1,12 +1,8 @@
 import sqlite3
 import os
 import time
-import settings
 from pprint import pprint
 from smbus2 import SMBus, i2c_msg
-
-
-settings.init()
 
 statuses = ["off", "on"]
 
