@@ -7,4 +7,5 @@ api/testing.py
 api/testing2.py
 .DS_store
 api/logs/
+.claude/
 
