@@ -112,6 +112,40 @@ Use 3V3 (pin 1) instead only if your board's docs confirm 3.3V logic *and* coil 
 - **Runs without the hardware attached** — on anything other than the Pi (e.g. developing on a Mac), the backend detects that `smbus2`/I2C isn't available and falls back to no-op valve control, so the API, scheduler, and frontend all still work for development.
 
 ---
+# Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+![Daily Use screen](support/photos/app-daily-use.jpg)
+*Daily Use — weather, the currently running schedule, and the zone list.*
+
+</td>
+<td width="50%">
+
+![Zones configuration](support/photos/app-zones-list.jpg)
+*Configuration → Zones — every zone's port and default run duration.*
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+![Schedules list](support/photos/app-schedules-list.jpg)
+*Configuration → Schedules — named schedules with their days/zones.*
+
+</td>
+<td width="50%">
+
+![Schedule editor](support/photos/app-schedule-editor.jpg)
+*Editing a schedule — days of week, multiple start times, and drag-orderable zones.*
+
+</td>
+</tr>
+</table>
+
+---
 # What was I thinking when I built it?
 
 I started working on this because I wanted to learn/build something IoT and it seemed like fun to control All (14 zones) of my sprinklers with a RaspberryPi. I worked on it on and off for a few years as my interest waxed and waned. Initially it was to be controlled via GPIO and mapped to relays. GPIO is interesting because ports and BCM don’t align so I started working on a mapping for the sprinkler zones, ports, and BCM. After getting all the APIs working with LEDs, I was able to demonstrate schedules, manual zone runs, and relay state. And then before I could test the 24VAC to run the sprinklers … I realized that GPIO is only 3.3V and the relay I purchased required 5V.  
