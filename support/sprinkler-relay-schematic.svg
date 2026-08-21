@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 980" width="1180" height="980" role="img" aria-label="Schematic showing a Raspberry Pi connected via four I2C wires (VCC, SDA, SCL, GND) directly to a 16-channel relay module with an onboard PCF8575 I2C expander. A 24VAC transformer's positive leg daisy-chains through each relay's COM terminal while each relay's NO terminal feeds an individual sprinkler zone valve, with every valve's return tied to a shared common bus wired to the transformer's negative leg and labeled as the sprinkler system's white common wire.">
+  <rect x="0" y="0" width="1180" height="980" fill="#fbfaf5"/>
+
+            <!-- corner ticks -->
+            <g stroke="#3a3d33" stroke-width="1.5" fill="none">
+              <path d="M8,28 L8,8 L28,8"/>
+              <path d="M1152,8 L1172,8 L1172,28"/>
+              <path d="M1172,952 L1172,972 L1152,972"/>
+              <path d="M28,972 L8,972 L8,952"/>
+            </g>
+
+            <!-- title block -->
+            <g font-family="'IBM Plex Mono', monospace" fill="#6e7268" font-size="10.5">
+              <text x="1172" y="944" text-anchor="end">DWG SPK&#8209;001 &#160;&#160;REV B &#160;&#160;SCALE NTS &#160;&#160;2026&#8209;08&#8209;21</text>
+            </g>
+
+            <g font-family="'IBM Plex Sans', sans-serif" fill="#22261f">
+
+              <!-- ============ RASPBERRY PI ============ -->
+              <rect x="40" y="70" width="210" height="190" rx="6" fill="#ffffff" stroke="#3a3d33" stroke-width="1.5"/>
+              <text x="145" y="96" text-anchor="middle" font-size="14" font-weight="700">RASPBERRY PI</text>
+              <text x="145" y="112" text-anchor="middle" font-size="10.5" fill="#6e7268">40-pin GPIO header</text>
+
+              <g font-family="'IBM Plex Mono', monospace" font-size="11">
+                <circle cx="250" cy="130" r="3.5" fill="#8a5a2b"/>
+                <text x="238" y="126" text-anchor="end">5V · pin 2</text>
+                <circle cx="250" cy="165" r="3.5" fill="#1f6f78"/>
+                <text x="238" y="161" text-anchor="end">SDA · pin 3</text>
+                <circle cx="250" cy="200" r="3.5" fill="#1f6f78"/>
+                <text x="238" y="196" text-anchor="end">SCL · pin 5</text>
+                <circle cx="250" cy="235" r="3.5" fill="#22261f"/>
+                <text x="238" y="231" text-anchor="end">GND · pin 6</text>
+              </g>
+
+              <!-- Pi -> relay module wires -->
+              <g stroke-width="2" fill="none">
+                <line x1="250" y1="130" x2="330" y2="130" stroke="#8a5a2b"/>
+                <line x1="250" y1="165" x2="330" y2="165" stroke="#1f6f78"/>
+                <line x1="250" y1="200" x2="330" y2="200" stroke="#1f6f78"/>
+                <line x1="250" y1="235" x2="330" y2="235" stroke="#22261f" stroke-dasharray="4 3"/>
+              </g>
+
+              <!-- ============ RELAY MODULE (onboard PCF8575) ============ -->
+              <rect x="330" y="50" width="760" height="580" rx="6" fill="#ffffff" stroke="#3a3d33" stroke-width="1.5"/>
+              <text x="710" y="76" text-anchor="middle" font-size="14" font-weight="700">16-CHANNEL RELAY MODULE</text>
+              <text x="710" y="92" text-anchor="middle" font-size="10.5" fill="#6e7268">onboard PCF8575 I&#178;C expander · opto-isolated relays</text>
+
+              <g font-family="'IBM Plex Mono', monospace" font-size="11">
+                <circle cx="330" cy="130" r="3.5" fill="#8a5a2b"/><text x="342" y="126">VCC</text>
+                <circle cx="330" cy="165" r="3.5" fill="#1f6f78"/><text x="342" y="161">SDA</text>
+                <circle cx="330" cy="200" r="3.5" fill="#1f6f78"/><text x="342" y="196">SCL</text>
+                <circle cx="330" cy="235" r="3.5" fill="#22261f"/><text x="342" y="231">GND</text>
+              </g>
+
+              <!-- isolation divider -->
+              <line x1="330" y1="400" x2="1090" y2="400" stroke="#cfcbb8" stroke-width="1.5" stroke-dasharray="2 5"/>
+              <text x="345" y="393" font-size="10" letter-spacing="0.06em" fill="#6e7268">LOGIC SIDE &#8901; 3.3&#8211;5V, ISOLATED FROM &#8595;</text>
+              <text x="345" y="416" font-size="10" letter-spacing="0.06em" fill="#6e7268">SWITCHED SIDE &#8901; 24VAC FIELD POWER</text>
+
+              <!-- channel columns -->
+              <g font-family="'IBM Plex Mono', monospace">
+                <!-- CH1 -->
+                <text x="410" y="522" text-anchor="middle" font-size="11" font-weight="600">CH1</text>
+                <circle cx="410" cy="560" r="3.5" fill="#b5451f"/><text x="422" y="564" font-size="10">COM</text>
+                <circle cx="410" cy="595" r="3.5" fill="#c4432b"/><text x="422" y="599" font-size="10">NO</text>
+                <!-- CH2 -->
+                <text x="570" y="522" text-anchor="middle" font-size="11" font-weight="600">CH2</text>
+                <circle cx="570" cy="560" r="3.5" fill="#b5451f"/><text x="582" y="564" font-size="10">COM</text>
+                <circle cx="570" cy="595" r="3.5" fill="#b8901a"/><text x="582" y="599" font-size="10">NO</text>
+                <!-- CH3 -->
+                <text x="730" y="522" text-anchor="middle" font-size="11" font-weight="600">CH3</text>
+                <circle cx="730" cy="560" r="3.5" fill="#b5451f"/><text x="742" y="564" font-size="10">COM</text>
+                <circle cx="730" cy="595" r="3.5" fill="#2e6fa3"/><text x="742" y="599" font-size="10">NO</text>
+                <!-- CH4 -->
+                <text x="890" y="522" text-anchor="middle" font-size="11" font-weight="600">CH4</text>
+                <circle cx="890" cy="560" r="3.5" fill="#b5451f"/><text x="902" y="564" font-size="10">COM</text>
+                <circle cx="890" cy="595" r="3.5" fill="#3c7a4e"/><text x="902" y="599" font-size="10">NO</text>
+
+                <text x="930" y="522" font-size="10" fill="#6e7268" font-style="italic">CH5&#8211;CH16 repeat</text>
+                <text x="930" y="564" font-size="10" fill="#6e7268" font-style="italic">&#8901;&#8901;&#8901; same pattern</text>
+              </g>
+
+              <!-- COM daisy chain -->
+              <g stroke="#b5451f" stroke-width="2.5">
+                <line x1="410" y1="560" x2="890" y2="560"/>
+                <line x1="890" y1="560" x2="920" y2="560" stroke-dasharray="3 4"/>
+              </g>
+              <g fill="#b5451f">
+                <circle cx="410" cy="560" r="3.5"/>
+                <circle cx="570" cy="560" r="3.5"/>
+                <circle cx="730" cy="560" r="3.5"/>
+                <circle cx="890" cy="560" r="3.5"/>
+              </g>
+
+              <!-- ============ TRANSFORMER ============ -->
+              <rect x="190" y="740" width="200" height="130" rx="6" fill="#ffffff" stroke="#3a3d33" stroke-width="1.5"/>
+              <text x="290" y="766" text-anchor="middle" font-size="13" font-weight="700">24VAC TRANSFORMER</text>
+              <text x="290" y="782" text-anchor="middle" font-size="10" fill="#6e7268">sprinkler power supply</text>
+
+              <g font-family="'IBM Plex Mono', monospace" font-size="11">
+                <circle cx="250" cy="870" r="3.5" fill="#7a7d70"/>
+                <text x="250" y="855" text-anchor="middle">&#8722;</text>
+                <circle cx="370" cy="740" r="3.5" fill="#b5451f"/>
+                <text x="370" y="800" text-anchor="middle">+</text>
+              </g>
+
+              <!-- transformer + -> CH1 COM -->
+              <polyline points="370,740 370,650 410,650 410,560" fill="none" stroke="#b5451f" stroke-width="2.5"/>
+
+              <!-- transformer - -> common bus -->
+              <line x1="250" y1="870" x2="250" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+
+              <!-- callout note -->
+              <line x1="190" y1="805" x2="100" y2="805" stroke="#cfcbb8" stroke-width="1"/>
+              <text x="96" y="800" text-anchor="end" font-size="11" fill="#6e7268" font-style="italic">&#8722; leg = sprinkler</text>
+              <text x="96" y="814" text-anchor="end" font-size="11" fill="#6e7268" font-style="italic">white common wire</text>
+
+              <!-- ============ ZONE WIRES + VALVES ============ -->
+              <g font-family="'IBM Plex Mono', monospace" font-size="10.5">
+                <!-- Zone 1 -->
+                <line x1="410" y1="595" x2="410" y2="674" stroke="#c4432b" stroke-width="2.5"/>
+                <circle cx="410" cy="700" r="26" fill="#ffffff" stroke="#c4432b" stroke-width="2"/>
+                <path d="M397,700 q6,-10 13,0 q6,10 13,0" fill="none" stroke="#c4432b" stroke-width="1.5"/>
+                <line x1="410" y1="726" x2="410" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+                <text x="410" y="742" text-anchor="middle" font-weight="600" fill="#c4432b">ZONE 1</text>
+
+                <!-- Zone 2 -->
+                <line x1="570" y1="595" x2="570" y2="674" stroke="#b8901a" stroke-width="2.5"/>
+                <circle cx="570" cy="700" r="26" fill="#ffffff" stroke="#b8901a" stroke-width="2"/>
+                <path d="M557,700 q6,-10 13,0 q6,10 13,0" fill="none" stroke="#b8901a" stroke-width="1.5"/>
+                <line x1="570" y1="726" x2="570" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+                <text x="570" y="742" text-anchor="middle" font-weight="600" fill="#b8901a">ZONE 2</text>
+
+                <!-- Zone 3 -->
+                <line x1="730" y1="595" x2="730" y2="674" stroke="#2e6fa3" stroke-width="2.5"/>
+                <circle cx="730" cy="700" r="26" fill="#ffffff" stroke="#2e6fa3" stroke-width="2"/>
+                <path d="M717,700 q6,-10 13,0 q6,10 13,0" fill="none" stroke="#2e6fa3" stroke-width="1.5"/>
+                <line x1="730" y1="726" x2="730" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+                <text x="730" y="742" text-anchor="middle" font-weight="600" fill="#2e6fa3">ZONE 3</text>
+
+                <!-- Zone 4 -->
+                <line x1="890" y1="595" x2="890" y2="674" stroke="#3c7a4e" stroke-width="2.5"/>
+                <circle cx="890" cy="700" r="26" fill="#ffffff" stroke="#3c7a4e" stroke-width="2"/>
+                <path d="M877,700 q6,-10 13,0 q6,10 13,0" fill="none" stroke="#3c7a4e" stroke-width="1.5"/>
+                <line x1="890" y1="726" x2="890" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+                <text x="890" y="742" text-anchor="middle" font-weight="600" fill="#3c7a4e">ZONE 4</text>
+              </g>
+
+              <!-- common bus -->
+              <line x1="250" y1="900" x2="930" y2="900" stroke="#7a7d70" stroke-width="2.5" stroke-dasharray="8 5"/>
+              <g fill="#7a7d70">
+                <circle cx="250" cy="900" r="3.5"/>
+                <circle cx="410" cy="900" r="3.5"/>
+                <circle cx="570" cy="900" r="3.5"/>
+                <circle cx="730" cy="900" r="3.5"/>
+                <circle cx="890" cy="900" r="3.5"/>
+              </g>
+              <text x="250" y="925" font-size="11" font-family="'IBM Plex Mono', monospace" fill="#6e7268">COMMON BUS &#8901; white wire &#8901; returns every valve to the transformer</text>
+              <text x="940" y="925" font-size="11" font-family="'IBM Plex Mono', monospace" fill="#6e7268" font-style="italic">continues to zones 5&#8211;16 &#8594;</text>
+
+            </g>
+          </svg>
