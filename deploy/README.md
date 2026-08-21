@@ -10,22 +10,23 @@
 
 ## One-time setup
 
-### 1. Copy the project to the Pi
-```bash
-# From your Mac, rsync the project over (adjust hostname/path as needed)
-rsync -av --exclude node_modules --exclude __pycache__ --exclude sprinklers_venv \
-  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/workspace/sprinklers/
-```
-
-### 2. Run the install script on the Pi
+### 1. Clone the repo onto the Pi
 SSH into the Pi, then:
 ```bash
-cd ~/workspace/sprinklers
+git clone https://github.com/codeesan/pi-sprinkler.git ~/pi-sprinkler
+cd ~/pi-sprinkler
+```
+
+### 2. Enable I2C
+The PCF8575 relay board communicates over I2C — enable it before installing (see the [I2C setup](#i2c-setup) section below).
+
+### 3. Run the install script
+```bash
 sudo bash deploy/install.sh
 ```
 
 The script will:
-- Install nginx, python3-venv, nodejs, npm
+- Install nginx, python3, python3-venv, python3-pip, nodejs, npm, i2c-tools
 - Create the Python virtualenv and install all pip dependencies (including `smbus2` for the relay board)
 - Build the Vue frontend into `frontend/dist/`
 - Install and enable the `sprinkler-api` systemd service
@@ -48,21 +49,17 @@ Open a browser to `http://raspberrypi.local` (or the Pi's IP address).
 
 ## Updating after code changes
 
+On the Pi:
 ```bash
-# From your Mac — push new code
-rsync -av --exclude node_modules --exclude __pycache__ --exclude sprinklers_venv \
-  /Users/cchandler/workspace/sprinklers/ pi@raspberrypi.local:~/workspace/sprinklers/
-
-# On the Pi — rebuild frontend and restart API
-cd ~/workspace/sprinklers
-source sprinklers_venv/bin/activate
-cd frontend && npm run build && cd ..
-sudo systemctl restart sprinkler-api
+cd ~/pi-sprinkler
+git pull
+bash deploy/restart.sh
 ```
+`restart.sh` re-syncs Python dependencies, rebuilds the frontend, and restarts the `sprinkler-api` service — it needs passwordless sudo for `systemctl` (or run it as root).
 
 ---
 
-## I2C setup (if not already enabled)
+## I2C setup
 
 The PCF8575 relay board communicates over I2C. Enable it once:
 ```bash
