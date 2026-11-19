@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
     loc_lat              REAL,
     loc_lon              REAL,
     rain_delay_enabled   INTEGER NOT NULL DEFAULT 0,
-    rain_delay_threshold INTEGER NOT NULL DEFAULT 50
+    rain_delay_threshold INTEGER NOT NULL DEFAULT 50,
+    rain_delay_until     TEXT
 );
 """
 
@@ -81,6 +82,7 @@ def _migrate_app_settings(con) -> None:
     pending = [
         ("rain_delay_enabled",   "INTEGER NOT NULL DEFAULT 0"),
         ("rain_delay_threshold", "INTEGER NOT NULL DEFAULT 50"),
+        ("rain_delay_until",     "TEXT"),
     ]
     for col, definition in pending:
         if col not in existing:
@@ -290,6 +292,24 @@ def upsert_settings(
         (new_name, new_loc.get("city", ""), new_loc.get("lat"), new_loc.get("lon"), int(new_rde), new_rdt),
     )
     return get_settings(con)
+
+
+def get_rain_delay_until(con) -> str | None:
+    """Return the ISO timestamp a manual rain delay runs until, or None if unset."""
+    row = con.execute("SELECT rain_delay_until FROM app_settings WHERE id = 1").fetchone()
+    return row["rain_delay_until"] if row else None
+
+
+def set_rain_delay_until(con, until: str | None) -> None:
+    """Set (or clear, with until=None) the manual rain delay expiry."""
+    con.execute(
+        """
+        INSERT INTO app_settings (id, rain_delay_until)
+        VALUES (1, ?)
+        ON CONFLICT(id) DO UPDATE SET rain_delay_until = excluded.rain_delay_until
+        """,
+        (until,),
+    )
 
 
 def get_active_schedule(con) -> dict | None:

@@ -24,6 +24,7 @@ from database import (
     get_active_run, start_run, end_run, clear_all_runs,
     get_active_schedule,
     get_settings, upsert_settings,
+    get_rain_delay_until, set_rain_delay_until,
 )
 from models import (
     Zone, ZoneCreate, ZoneUpdate,
@@ -31,6 +32,7 @@ from models import (
     SystemStatus, RunningZone, ActiveSchedule,
     HistoryEvent,
     AppSettings, AppSettingsUpdate,
+    RainDelayRequest, RainDelayStatus,
     WeatherData,
 )
 
@@ -47,6 +49,9 @@ from event_log import (
     log_schedule_zone_start,
     log_schedule_complete,
     log_schedule_skipped_rain,
+    log_schedule_skipped_rain_delay,
+    log_rain_delay_set,
+    log_rain_delay_cleared,
 )
 
 # ---------------------------------------------------------------------------
@@ -77,6 +82,19 @@ _schedule_tasks: dict[str, asyncio.Task] = {}  # schedule_id -> running asyncio.
 
 # APScheduler instance (async mode so it runs inside uvicorn's event loop)
 scheduler = AsyncIOScheduler()
+
+
+def _active_rain_delay(con) -> datetime | None:
+    """Return the manual rain-delay expiry if one is set and still in the future, else None.
+
+    Expiry is checked lazily here rather than cleared in the DB when it passes,
+    so a delay just quietly stops applying once its time is up.
+    """
+    raw = get_rain_delay_until(con)
+    if not raw:
+        return None
+    until = datetime.fromisoformat(raw)
+    return until if until > datetime.now(timezone.utc) else None
 
 
 # ---------------------------------------------------------------------------
@@ -118,10 +136,17 @@ async def _execute_schedule(schedule_id: str) -> None:
     with get_db() as con:
         schedule = get_schedule(con, schedule_id)
         s = get_settings(con)
+        manual_delay_until = _active_rain_delay(con)
     if not schedule:
         return
 
-    # Rain delay check
+    # Manual rain delay (set via POST /system/rain-delay) — takes priority over,
+    # and is independent of, the automatic threshold-based check below.
+    if manual_delay_until is not None:
+        log_schedule_skipped_rain_delay(schedule["name"], manual_delay_until.isoformat())
+        return
+
+    # Rain delay check (automatic, threshold-based)
     if s["rain_delay_enabled"] and _weather_cache is not None:
         prob = _weather_cache.precip_probability
         threshold = s["rain_delay_threshold"]
@@ -226,7 +251,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="Sprinkler API", lifespan=lifespan)
+app = FastAPI(title="Sprinkler API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -382,9 +407,15 @@ def system_status():
     with get_db() as con:
         run = get_active_run(con)
         sched_info = get_active_schedule(con) if run else None
+        delay_until = _active_rain_delay(con)
+
+    rain_delay_until = delay_until.isoformat() if delay_until else None
 
     if not run:
-        return SystemStatus(any_running=False, running_zone=None, active_schedule=None)
+        return SystemStatus(
+            any_running=False, running_zone=None, active_schedule=None,
+            rain_delay_until=rain_delay_until,
+        )
 
     started = datetime.fromisoformat(run["started_at"])
     elapsed = int((datetime.now(timezone.utc) - started).total_seconds())
@@ -399,7 +430,42 @@ def system_status():
         schedule_id=run["schedule_id"],
     )
     as_ = ActiveSchedule(**sched_info) if sched_info else None
-    return SystemStatus(any_running=True, running_zone=rz, active_schedule=as_)
+    return SystemStatus(
+        any_running=True, running_zone=rz, active_schedule=as_,
+        rain_delay_until=rain_delay_until,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Rain delay (manual override) — new in 0.2.0, additive.
+#
+# Separate from the automatic threshold-based skip configured via
+# /settings (rain_delay_enabled/rain_delay_threshold), which re-evaluates the
+# forecast on every scheduled run. This instead pauses all scheduled runs
+# until a fixed point in time, regardless of forecast, until cleared or expired.
+# ---------------------------------------------------------------------------
+@app.get("/system/rain-delay", response_model=RainDelayStatus)
+def get_rain_delay():
+    with get_db() as con:
+        until = _active_rain_delay(con)
+    return RainDelayStatus(rain_delay_until=until.isoformat() if until else None)
+
+
+@app.post("/system/rain-delay", response_model=RainDelayStatus)
+def start_rain_delay(body: RainDelayRequest):
+    until = datetime.now(timezone.utc) + timedelta(hours=body.hours)
+    with get_db() as con:
+        set_rain_delay_until(con, until.isoformat())
+    log_rain_delay_set(body.hours, until.isoformat())
+    return RainDelayStatus(rain_delay_until=until.isoformat())
+
+
+@app.delete("/system/rain-delay", response_model=RainDelayStatus)
+def cancel_rain_delay():
+    with get_db() as con:
+        set_rain_delay_until(con, None)
+    log_rain_delay_cleared()
+    return RainDelayStatus(rain_delay_until=None)
 
 
 # ---------------------------------------------------------------------------

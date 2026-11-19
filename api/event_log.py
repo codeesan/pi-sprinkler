@@ -159,3 +159,27 @@ def log_schedule_skipped_rain(schedule_name: str, precip_probability: int) -> No
         message=f"Schedule '{schedule_name}' skipped — {precip_probability}% chance of rain",
         details={"schedule_name": schedule_name, "precip_probability": precip_probability},
     )
+
+
+def log_schedule_skipped_rain_delay(schedule_name: str, until: str) -> None:
+    _emit(
+        event_type="schedule_skipped_rain_delay",
+        message=f"Schedule '{schedule_name}' skipped — manual rain delay active until {until}",
+        details={"schedule_name": schedule_name, "rain_delay_until": until},
+    )
+
+
+def log_rain_delay_set(hours: int, until: str) -> None:
+    _emit(
+        event_type="rain_delay_set",
+        message=f"Rain delay set for {hours}h — watering paused until {until}",
+        details={"hours": hours, "rain_delay_until": until},
+    )
+
+
+def log_rain_delay_cleared() -> None:
+    _emit(
+        event_type="rain_delay_cleared",
+        message="Rain delay cleared — scheduled watering resumed",
+        details={},
+    )
