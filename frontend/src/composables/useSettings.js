@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 
-const API_BASE = `http://${window.location.hostname}:8000`
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`
 const STORAGE_KEY = 'sprinkler_settings'
 
 const defaultSettings = {
