@@ -1,7 +1,7 @@
 import { reactive, watch } from 'vue'
 import { useSettings } from './useSettings'
 
-const API_BASE = `http://${window.location.hostname}:8000`
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`
 
 const state = reactive({
   temperature: null,

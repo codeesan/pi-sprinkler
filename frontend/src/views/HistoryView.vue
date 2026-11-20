@@ -164,7 +164,7 @@ async function fetchHistory() {
   loading.value = true
   error.value = null
   try {
-    const base = `http://${window.location.hostname}:8000`
+    const base = `${window.location.protocol}//${window.location.hostname}:8000`
     const res = await fetch(`${base}/history?limit=200`)
     if (!res.ok) throw new Error(`Server returned ${res.status}`)
     const data = await res.json()
