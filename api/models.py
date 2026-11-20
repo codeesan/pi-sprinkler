@@ -72,6 +72,7 @@ class SystemStatus(BaseModel):
     any_running: bool
     running_zone: Optional[RunningZone]
     active_schedule: Optional[ActiveSchedule]
+    rain_delay_until: Optional[str] = None
 
 
 class HistoryEvent(BaseModel):
@@ -100,6 +101,14 @@ class AppSettingsUpdate(BaseModel):
     location: Optional[LocationData] = None
     rain_delay_enabled: Optional[bool] = None
     rain_delay_threshold: Optional[int] = Field(default=None, ge=10, le=90)
+
+
+class RainDelayRequest(BaseModel):
+    hours: int = Field(..., ge=1, le=168)
+
+
+class RainDelayStatus(BaseModel):
+    rain_delay_until: Optional[str] = None
 
 
 class WeatherData(BaseModel):
